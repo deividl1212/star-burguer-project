@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Star Burguer — Painel Administrativo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">🔥</div>
+    <h1>Star Burguer</h1>
+    <p class="subtitle">Painel administrativo</p>
+    <div class="field">
+      <label>Usuário</label>
+      <input type="text" id="loginUsuario" placeholder="usuário" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="loginSenha" placeholder="••••••••">
+    </div>
+    <p class="error-msg" id="loginError"></p>
+    <button class="btn-primary" id="btnLogin">Entrar</button>
+    <a class="back-link" href="../index.html">← Voltar para o site</a>
+  </div>
+</div>
+
+<!-- ===== DASHBOARD (visível só após login) ===== -->
+<div class="dashboard hidden" id="dashboard">
+  <header class="admin-header">
+    <div class="admin-brand">🔥 <span>Star Burguer — Admin</span></div>
+    <div class="admin-header-actions">
+      <a class="link-ghost" href="../index.html" target="_blank">Ver site</a>
+      <button class="btn-ghost-sm" id="btnLogout">Sair</button>
+    </div>
+  </header>
+
+  <main class="admin-main">
+    <div class="admin-toolbar">
+      <h2>Kits cadastrados</h2>
+      <button class="btn-primary btn-sm" id="btnNovoKit">+ Novo kit</button>
+    </div>
+    <p class="admin-msg" id="adminMsg"></p>
+    <div id="kitsList" class="kits-list"></div>
+  </main>
+</div>
+
+<!-- ===== FORMULÁRIO DE EDIÇÃO (modal) ===== -->
+<div class="overlay" id="formOverlay">
+  <div class="form-card" id="formCard"></div>
+</div>
+
+<script src="../config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="admin.js"></script>
+</body>
+</html>

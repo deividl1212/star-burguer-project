@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Star Burguer — Peça seu Kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ================= WELCOME SCREEN ================= -->
+<div class="welcome-screen" id="welcomeScreen">
+  <div class="embers" id="embersWelcome"></div>
+  <div class="welcome-inner">
+    <svg class="welcome-logo" viewBox="0 0 100 100"><use href="#logo-flame"/></svg>
+    <h1>Seja bem-vindo à<span>Star Burguer</span></h1>
+    <p>Hambúrgueres gourmet em kit, prontos para montar. Sabor de restaurante no conforto da sua casa.</p>
+    <div class="welcome-actions">
+      <button class="btn-ghost" id="btnSobreWelcome">
+        <svg viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+        <span>Sobre nós</span>
+      </button>
+      <button class="btn-ghost" id="btnContatoWelcome">
+        <svg viewBox="0 0 24 24"><path d="M20.5 3.5A11.9 11.9 0 0 0 12.02 0C5.5 0 .17 5.32.17 11.85c0 2.09.55 4.13 1.6 5.93L0 24l6.4-1.68a11.8 11.8 0 0 0 5.62 1.43h.01c6.53 0 11.85-5.32 11.85-11.85 0-3.17-1.23-6.15-3.38-8.4zM12.03 21.6a9.8 9.8 0 0 1-5-1.36l-.36-.21-3.8 1 1.01-3.7-.23-.38a9.75 9.75 0 0 1-1.5-5.1c0-5.4 4.4-9.8 9.8-9.8 2.62 0 5.08 1.02 6.93 2.87a9.73 9.73 0 0 1 2.87 6.93c0 5.4-4.4 9.75-9.72 9.75z"/></svg>
+        <span>Fale conosco</span>
+      </button>
+      <button class="btn-ghost" id="btnInstagramWelcome">
+        <svg viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.55.22.95.47 1.37.89.42.42.67.82.89 1.37.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.55-.47.95-.89 1.37-.42.42-.82.67-1.37.89-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.55-.22-.95-.47-1.37-.89-.42-.42-.67-.82-.89-1.37-.16-.42-.36-1.06-.41-2.23-.06-1.27-.07-1.65-.07-4.85s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.55.47-.95.89-1.37.42-.42.82-.67 1.37-.89.42-.16 1.06-.36 2.23-.41 1.27-.06 1.65-.07 4.85-.07M12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.31-1.46.72-2.13 1.38C1.35 2.68.94 3.35.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.31.79.72 1.46 1.38 2.13.66.66 1.34 1.07 2.13 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56.79-.31 1.46-.72 2.13-1.38.66-.66 1.07-1.34 1.38-2.13.3-.76.5-1.64.56-2.91.06-1.27.07-1.68.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91-.31-.79-.72-1.46-1.38-2.13C20.32 1.35 19.65.94 18.86.63c-.76-.3-1.64-.5-2.91-.56C14.67.01 14.26 0 12 0zm0 5.84A6.16 6.16 0 1 0 12 18.16 6.16 6.16 0 0 0 12 5.84zm0 10.16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.41-10.4a1.44 1.44 0 1 1-2.88 0 1.44 1.44 0 0 1 2.88 0z"/></svg>
+        <span>Instagram</span>
+      </button>
+      <button class="btn-primary btn-cta-large" id="btnPedirWelcome">Faça seu pedido agora</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= CATALOG SCREEN ================= -->
+<div class="catalog-screen hidden" id="catalogScreen">
+
+  <header class="topbar">
+    <button class="brand" id="brandHome" aria-label="Voltar ao início">
+      <svg viewBox="0 0 100 100"><use href="#logo-flame"/></svg>
+      <span>STAR BURGUER</span>
+    </button>
+    <div class="nav-icons">
+      <button class="nav-icon-btn" id="btnSobreNav">
+        <svg viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+        <span class="nav-icon-label">Sobre nós</span>
+      </button>
+      <button class="nav-icon-btn" id="btnContatoNav">
+        <svg viewBox="0 0 24 24"><path d="M20.5 3.5A11.9 11.9 0 0 0 12.02 0C5.5 0 .17 5.32.17 11.85c0 2.09.55 4.13 1.6 5.93L0 24l6.4-1.68a11.8 11.8 0 0 0 5.62 1.43h.01c6.53 0 11.85-5.32 11.85-11.85 0-3.17-1.23-6.15-3.38-8.4zM12.03 21.6a9.8 9.8 0 0 1-5-1.36l-.36-.21-3.8 1 1.01-3.7-.23-.38a9.75 9.75 0 0 1-1.5-5.1c0-5.4 4.4-9.8 9.8-9.8 2.62 0 5.08 1.02 6.93 2.87a9.73 9.73 0 0 1 2.87 6.93c0 5.4-4.4 9.75-9.72 9.75z"/></svg>
+        <span class="nav-icon-label">Fale conosco</span>
+      </button>
+      <button class="nav-icon-btn" id="btnInstagramNav">
+        <svg viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.55.22.95.47 1.37.89.42.42.67.82.89 1.37.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.55-.47.95-.89 1.37-.42.42-.82.67-1.37.89-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.55-.22-.95-.47-1.37-.89-.42-.42-.67-.82-.89-1.37-.16-.42-.36-1.06-.41-2.23-.06-1.27-.07-1.65-.07-4.85s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.55.47-.95.89-1.37.42-.42.82-.67 1.37-.89.42-.16 1.06-.36 2.23-.41 1.27-.06 1.65-.07 4.85-.07M12 0C8.74 0 8.33.01 7.05.07 5.78.13 4.9.33 4.14.63c-.79.31-1.46.72-2.13 1.38C1.35 2.68.94 3.35.63 4.14.33 4.9.13 5.78.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.06 1.27.26 2.15.56 2.91.31.79.72 1.46 1.38 2.13.66.66 1.34 1.07 2.13 1.38.76.3 1.64.5 2.91.56C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c1.27-.06 2.15-.26 2.91-.56.79-.31 1.46-.72 2.13-1.38.66-.66 1.07-1.34 1.38-2.13.3-.76.5-1.64.56-2.91.06-1.27.07-1.68.07-4.95s-.01-3.67-.07-4.95c-.06-1.27-.26-2.15-.56-2.91-.31-.79-.72-1.46-1.38-2.13C20.32 1.35 19.65.94 18.86.63c-.76-.3-1.64-.5-2.91-.56C14.67.01 14.26 0 12 0zm0 5.84A6.16 6.16 0 1 0 12 18.16 6.16 6.16 0 0 0 12 5.84zm0 10.16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.41-10.4a1.44 1.44 0 1 1-2.88 0 1.44 1.44 0 0 1 2.88 0z"/></svg>
+        <span class="nav-icon-label">Instagram</span>
+      </button>
+    </div>
+    <button class="cart-btn" id="openCartBtn" aria-label="Abrir carrinho">
+      <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12L8.1 13h7.45c.75 0 1.41-.41 1.75-1.03L20.7 5H4.54l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+      <span class="cart-badge" id="cartBadge" style="display:none;">0</span>
+    </button>
+  </header>
+
+  <section class="hero">
+    <div class="embers" id="embers"></div>
+    <svg class="hero-logo" viewBox="0 0 100 100"><use href="#logo-flame"/></svg>
+    <h1>STAR<br><span>BURGUER</span></h1>
+    <p>Hambúrgueres gourmet em kit, prontos para montar. Sabor de restaurante no conforto da sua casa.</p>
+  </section>
+  <div class="ticket-divider"></div>
+
+  <main>
+    <div class="section-title">
+      <h2>Nossos Kits</h2>
+      <div class="rule"></div>
+    </div>
+    <div id="menuList" class="menu-grid"></div>
+  </main>
+
+  <footer>
+    <svg class="flame-mini" viewBox="0 0 100 100"><use href="#logo-flame"/></svg>
+    Star Burguer · Peça pelo site, receba a confirmação no WhatsApp
+  </footer>
+
+  <button class="floating-cart" id="floatingCart">
+    <div class="fc-left">
+      <span class="fc-count" id="fcCount">0</span>
+      <span>Ver pedido</span>
+    </div>
+    <div class="fc-total num" id="fcTotal">R$ 0,00</div>
+  </button>
+
+</div>
+
+<!-- PRODUCT MODAL -->
+<div class="overlay" id="productOverlay">
+  <div class="sheet" id="productSheet"></div>
+</div>
+
+<!-- CART MODAL -->
+<div class="overlay" id="cartOverlay">
+  <div class="sheet" id="cartSheet"></div>
+</div>
+
+<!-- CHECKOUT MODAL -->
+<div class="overlay" id="checkoutOverlay">
+  <div class="sheet" id="checkoutSheet"></div>
+</div>
+
+<!-- SOBRE NÓS MODAL -->
+<div class="overlay" id="sobreOverlay">
+  <div class="sheet" id="sobreSheet">
+    <button class="sheet-close" id="closeSobre">✕</button>
+    <div class="sheet-scroll">
+      <svg class="icon-hero" viewBox="0 0 100 100"><use href="#logo-flame"/></svg>
+      <h2>Sobre a Star Burguer</h2>
+      <p class="desc">A Star Burguer nasceu para levar o sabor de hambúrguer gourmet para dentro da sua casa. Trabalhamos com kits para você mesmo montar seu lanche, com ingredientes selecionados e o mesmo capricho de um restaurante — do pão brioche ao ponto certo do bacon. Peça sob encomenda, no dia e na hora que fizer sentido para você.</p>
+      <p class="sobre-note">🔥 Texto institucional de exemplo — pode ser editado no painel administrativo.</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- SVG defs: reusable flame logo + burger icon -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="logo-flame" viewBox="0 0 100 100">
+      <path d="M50 4c6 14-8 18-6 30 6-4 8-12 8-12 8 10 2 22-4 28 10-2 20-12 18-26 8 8 10 22 2 32-10 12-30 12-38 0-8-11-4-24 4-32-2 8 2 14 2 14-6-12 4-22 14-34z" fill="url(#flameGrad)"/>
+      <circle cx="50" cy="60" r="26" fill="url(#goldGrad)" stroke="#7a1f1f" stroke-width="2"/>
+      <path d="M28 55c2-14 40-14 42 0" fill="none" stroke="#7a1f1f" stroke-width="3" stroke-linecap="round"/>
+      <path d="M26 63h48c0 8-10 12-24 12s-24-4-24-12z" fill="#fff" stroke="#1a1a1a" stroke-width="1.5"/>
+      <text x="50" y="72" font-family="Anton" font-size="15" fill="#1a1a1a" text-anchor="middle">STAR</text>
+    </symbol>
+    <symbol id="burger-icon" viewBox="0 0 64 64">
+      <ellipse cx="32" cy="18" rx="22" ry="11" fill="#e8b04b"/>
+      <circle cx="24" cy="14" r="1.4" fill="#7a4a12"/><circle cx="34" cy="11" r="1.4" fill="#7a4a12"/><circle cx="42" cy="15" r="1.4" fill="#7a4a12"/>
+      <path d="M12 30c8 4 32 4 40 0v4c-8 4-32 4-40 0z" fill="#3fa34d"/>
+      <rect x="12" y="33" width="40" height="8" rx="3" fill="#f2c230"/>
+      <rect x="12" y="41" width="40" height="9" rx="3" fill="#7a4321"/>
+      <path d="M11 50c8 6 34 6 42 0l-2 7c-8 5-30 5-38 0z" fill="#e8b04b"/>
+    </symbol>
+    <linearGradient id="flameGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff7a3d"/>
+      <stop offset="100%" stop-color="#e8262a"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f7c948"/>
+      <stop offset="100%" stop-color="#e29a12"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="script.js"></script>
+</body>
+</html>
