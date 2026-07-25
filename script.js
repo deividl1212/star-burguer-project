@@ -92,9 +92,11 @@
 
     return client
       .from("kits")
-      .select("id, nome, descricao, tier, ativo, ordem, kit_opcoes ( id, label, preco, itens, ordem )")
+      .select("id, nome, descricao, tier, ativo, ordem, destaque, kit_opcoes ( id, label, preco, itens, ordem )")
       .eq("ativo", true)
+      .order("destaque", { ascending: false })
       .order("ordem", { ascending: true })
+
       .then(function(res){
         if (res.error || !res.data || res.data.length === 0){
           console.warn("Não foi possível carregar os kits do Supabase, usando dados locais.", res.error);
@@ -108,6 +110,7 @@
             tier: row.tier,
             tierColor: TIER_COLORS[row.tier] || TIER_COLORS.ouro,
             desc: row.descricao,
+            destaque: !!row.destaque,
             opcoes: opcoesOrdenadas.map(function(o){
               return { label: o.label, preco: Number(o.preco), itens: o.itens || [] };
             })
@@ -128,6 +131,9 @@
   var activeQty = 1;
   var deliveryType = "entrega"; // ou "retirada"
   var paymentMethod = null;
+  var appliedCoupon = null; // { cupom_id, codigo, tipo_desconto, valor, aplica_todos_kits, kits_aplicaveis }
+  var bairrosCache = [];
+  var selectedBairroId = null;
 
   /* ============ HELPERS ============ */
   function brl(v){
@@ -167,6 +173,62 @@
     window.open(INSTAGRAM_URL, "_blank");
   }
 
+  /* ============ PROMOÇÃO (BANNER) ============ */
+  function carregarPromocaoAtiva(){
+    if (!supabaseConfigurado()) return;
+    var client = getSupabaseClient();
+    if (!client) return;
+
+    client
+      .from("promocoes")
+      .select("id, titulo, descricao, item_brinde, quantidade_brinde, texto_validade, ativo")
+      .eq("ativo", true)
+      .order("criado_em", { ascending: false })
+      .limit(1)
+      .then(function(res){
+        if (res.error || !res.data || res.data.length === 0) return;
+        renderPromoBanner(res.data[0]);
+      });
+  }
+
+  function renderPromoBanner(promo){
+    var el = document.getElementById("promoBanner");
+    if (!el) return;
+    el.innerHTML =
+      '<div class="promo-banner">' +
+        '<span class="promo-banner-tag">🔥 Super Promoção</span>' +
+        '<h3>' + promo.titulo + '</h3>' +
+        (promo.descricao ? '<p>' + promo.descricao + '</p>' : '') +
+        '<div class="promo-banner-brinde">🎁 Leve grátis: ' + promo.quantidade_brinde + 'x ' + promo.item_brinde + '</div>' +
+       (promo.texto_validade ? '<span class="promo-banner-validade">' + promo.texto_validade + '</span>' : '') +
+      '</div>';
+  }
+
+  /* ============ BAIRROS / TAXA DE ENTREGA ============ */
+  function carregarBairros(){
+    if (!supabaseConfigurado()) return;
+    var client = getSupabaseClient();
+    if (!client) return;
+
+    client
+      .from("bairros")
+      .select("id, nome, distancia_km, taxa, ordem, ativo")
+      .eq("ativo", true)
+      .order("ordem", { ascending: true })
+      .then(function(res){
+        if (res.error || !res.data) return;
+        bairrosCache = res.data;
+      });
+  }
+
+  function findBairro(id){ return bairrosCache.find(function(b){ return b.id === id; }); }
+
+  function taxaEntregaAtual(){
+    if (deliveryType !== "entrega") return 0;
+    var b = findBairro(selectedBairroId);
+    return b ? Number(b.taxa) : 0;
+  }
+
   /* ============ RENDER: MENU ============ */
   function renderMenu(){
     var list = document.getElementById("menuList");
@@ -175,7 +237,8 @@
       var min = Math.min.apply(null, precos);
       var multi = kit.opcoes.length > 1;
       return (
-        '<div class="kit-card ' + (kit.tier === "premium" ? "tier-premium" : "") + '" data-kit="' + kit.id + '">' +
+        '<div class="kit-card ' + (kit.tier === "premium" ? "tier-premium" : "") + (kit.destaque ? " kit-destaque" : "") + '" data-kit="' + kit.id + '">' +
+          (kit.destaque ? '<span class="destaque-badge">🔥 Oferta da semana</span>' : '') +
           '<div class="kit-icon-wrap" style="--tier-color:' + kit.tierColor + '">' +
             '<svg viewBox="0 0 64 64"><use href="#burger-icon"/></svg>' +
           '</div>' +
@@ -195,6 +258,7 @@
       btn.addEventListener("click", function(){ openProduct(btn.getAttribute("data-open")); });
     });
   }
+
 
   /* ============ PRODUTO (MODAL) ============ */
   function openProduct(kitId){
@@ -297,16 +361,14 @@
     document.getElementById("fcCount").textContent = count;
     document.getElementById("fcTotal").textContent = brl(cartTotal());
     var badge = document.getElementById("cartBadge");
+    fc.classList.add("show"); // sempre visível, mesmo com carrinho vazio
     if (count > 0){
-      fc.classList.add("show");
       badge.style.display = "flex";
       badge.textContent = count;
     } else {
-      fc.classList.remove("show");
       badge.style.display = "none";
     }
   }
-
   function openCart(){
     renderCartSheet();
     document.getElementById("cartOverlay").classList.add("open");
@@ -413,12 +475,37 @@
       '<div class="field" id="fieldNome"><label>Nome</label><input type="text" id="inputNome" placeholder="Seu nome completo"><span class="error-text">Informe seu nome.</span></div>' +
 
       '<div class="field" id="fieldEndereco" style="display:' + (deliveryType==="entrega"?"block":"none") + '">' +
-        '<label>Endereço</label><input type="text" id="inputEndereco" placeholder="Rua, número, bairro"><span class="error-text">Informe o endereço de entrega.</span>' +
+        '<label>Endereço</label><input type="text" id="inputEndereco" placeholder="Rua, número"><span class="error-text">Informe o endereço de entrega.</span>' +
+      '</div>' +
+
+      '<div class="field" id="fieldBairro" style="display:' + (deliveryType==="entrega"?"block":"none") + '">' +
+        '<label>Bairro</label>' +
+        '<select id="inputBairro">' +
+          '<option value="">Selecione seu bairro</option>' +
+          bairrosCache.map(function(b){
+            return '<option value="' + b.id + '" ' + (selectedBairroId === b.id ? "selected" : "") + '>' + b.nome + '</option>';
+          }).join("") +
+        '</select>' +
+        '<span class="bairro-taxa-msg" id="bairroTaxaMsg">' + (selectedBairroId ? (Number(findBairro(selectedBairroId).taxa) === 0 ? "Entrega grátis para este bairro." : "Taxa de entrega: " + brl(Number(findBairro(selectedBairroId).taxa))) : "") + '</span>' +
+        '<span class="error-text">Selecione seu bairro.</span>' +
       '</div>' +
 
       '<div class="field" id="fieldTelefone"><label>Telefone</label><input type="tel" id="inputTelefone" placeholder="(00) 00000-0000"><span class="error-text">Informe um telefone válido.</span></div>' +
 
-      '<div class="field"><label>Data desejada de entrega</label><input type="date" id="inputData"><span class="error-text">Escolha uma data.</span></div>' +
+     '<div class="form-row">' +
+        '<div class="field"><label>Data desejada</label><input type="date" id="inputData"><span class="error-text">Escolha uma data.</span></div>' +
+        '<div class="field"><label>Horário desejado</label><input type="time" id="inputHora"><span class="error-text">Escolha um horário.</span></div>' +
+      '</div>' +
+
+      '<div class="field"><label>Cupom de desconto (opcional)</label>' +
+        '<div class="cupom-row">' +
+          '<input type="text" id="inputCupom" placeholder="Digite o código" value="' + (appliedCoupon ? appliedCoupon.codigo : "") + '" ' + (appliedCoupon ? "disabled" : "") + '>' +
+          (appliedCoupon
+            ? '<button type="button" class="btn-cupom-remove" id="btnRemoverCupom">Remover</button>'
+            : '<button type="button" class="btn-cupom-aplicar" id="btnAplicarCupom">Aplicar</button>') +
+        '</div>' +
+        '<span class="cupom-msg" id="cupomMsg" style="color:' + (appliedCoupon ? "var(--gold)" : "var(--red)") + ';">' + (appliedCoupon ? "Cupom aplicado: -" + (appliedCoupon.tipo_desconto === "percentual" ? appliedCoupon.valor + "%" : brl(appliedCoupon.valor)) : "") + '</span>' +
+      '</div>' +
 
       '<div class="field" id="fieldPagamento"><label>Forma de pagamento</label>' +
         '<div class="pay-grid">' +
@@ -431,10 +518,7 @@
 
       '<div class="field"><label>Observações (opcional)</label><textarea id="inputObs" placeholder="Ex: sem cebola, entregar na portaria..."></textarea></div>' +
       '</div>' +
-      '<div class="sheet-footer">' +
-        '<button class="btn-primary" id="sendOrderBtn">Enviar pedido pelo WhatsApp</button>' +
-        '<p class="badge-note">Ao continuar, seu pedido completo será aberto em uma conversa do WhatsApp para confirmação.</p>' +
-      '</div>';
+      '<div class="sheet-footer" id="checkoutFooter"></div>';
 document.getElementById("closeCheckout").addEventListener("click", closeCheckout);
     document.getElementById("toggleEntrega").addEventListener("click", function(){
       deliveryType = "entrega";
@@ -450,13 +534,113 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
         atualizarPagamentoUI();
       });
     });
-    document.getElementById("sendOrderBtn").addEventListener("click", trySendOrder);
+
+    var btnAplicarCupom = document.getElementById("btnAplicarCupom");
+    if (btnAplicarCupom){
+      btnAplicarCupom.addEventListener("click", aplicarCupom);
+    }
+    var btnRemoverCupom = document.getElementById("btnRemoverCupom");
+    if (btnRemoverCupom){
+      btnRemoverCupom.addEventListener("click", function(){
+        appliedCoupon = null;
+        renderCheckoutSheet();
+      });
+    }
+
+    var inputBairro = document.getElementById("inputBairro");
+    if (inputBairro){
+      inputBairro.addEventListener("change", function(){
+        selectedBairroId = this.value || null;
+        var msgEl = document.getElementById("bairroTaxaMsg");
+        var b = findBairro(selectedBairroId);
+        if (b){
+          msgEl.textContent = Number(b.taxa) === 0 ? "Entrega grátis para este bairro." : "Taxa de entrega: " + brl(Number(b.taxa));
+        } else {
+          msgEl.textContent = "";
+        }
+        renderCheckoutFooter();
+      });
+    }
+
+    renderCheckoutFooter();
+  }
+
+  function aplicarCupom(){
+    var codigo = document.getElementById("inputCupom").value.trim();
+    var telefone = document.getElementById("inputTelefone").value.trim();
+    var msgEl = document.getElementById("cupomMsg");
+
+    if (!codigo){ msgEl.style.color = "var(--red)"; msgEl.textContent = "Digite um código."; return; }
+    if (!telefone){ msgEl.style.color = "var(--red)"; msgEl.textContent = "Preencha o telefone antes de aplicar o cupom."; return; }
+
+    var client = getSupabaseClient();
+    if (!client){ msgEl.style.color = "var(--red)"; msgEl.textContent = "Não foi possível validar o cupom agora."; return; }
+
+    msgEl.style.color = "var(--cream-dim)";
+    msgEl.textContent = "Verificando...";
+
+    client.rpc("validar_cupom", { p_codigo: codigo, p_telefone: telefone }).then(function(res){
+      if (res.error || !res.data || !res.data.valido){
+        appliedCoupon = null;
+        msgEl.style.color = "var(--red)";
+        msgEl.textContent = (res.data && res.data.motivo) ? res.data.motivo : "Cupom inválido.";
+        return;
+      }
+      appliedCoupon = res.data;
+      renderCheckoutSheet();
+    });
+  }
+
+  function calcularDesconto(){
+    if (!appliedCoupon) return 0;
+    var baseTotal;
+    if (appliedCoupon.aplica_todos_kits){
+      baseTotal = cartTotal();
+    } else {
+      var elegiveis = appliedCoupon.kits_aplicaveis || [];
+      baseTotal = cart.reduce(function(sum, item){
+        if (elegiveis.indexOf(item.kitId) !== -1){
+          var kit = findKit(item.kitId);
+          var opt = kit.opcoes[item.optIndex];
+          return sum + opt.preco * item.qty;
+        }
+        return sum;
+      }, 0);
+    }
+    if (appliedCoupon.tipo_desconto === "percentual"){
+      return baseTotal * (appliedCoupon.valor / 100);
+    }
+    return Math.min(appliedCoupon.valor, baseTotal);
   }
 
   function atualizarTipoEntregaUI(){
     document.getElementById("toggleEntrega").classList.toggle("active", deliveryType === "entrega");
     document.getElementById("toggleRetirada").classList.toggle("active", deliveryType === "retirada");
     document.getElementById("fieldEndereco").style.display = deliveryType === "entrega" ? "block" : "none";
+    document.getElementById("fieldBairro").style.display = deliveryType === "entrega" ? "block" : "none";
+    renderCheckoutFooter();
+  }
+
+  function renderCheckoutFooter(){
+    var footer = document.getElementById("checkoutFooter");
+    if (!footer) return;
+    var desconto = calcularDesconto();
+    var taxa = taxaEntregaAtual();
+    var total = cartTotal() - desconto + taxa;
+
+    footer.innerHTML =
+      (appliedCoupon ?
+        '<div class="cart-summary-row" style="font-size:0.85rem; font-weight:600;"><span>Subtotal</span><span class="num">' + brl(cartTotal()) + '</span></div>' +
+        '<div class="cart-summary-row" style="font-size:0.85rem; font-weight:600; color:var(--gold);"><span>Desconto (' + appliedCoupon.codigo + ')</span><span class="num">-' + brl(desconto) + '</span></div>'
+        : "") +
+      (deliveryType === "entrega" ?
+        '<div class="cart-summary-row" style="font-size:0.85rem; font-weight:600;"><span>Taxa de entrega</span><span class="num">' + (selectedBairroId ? brl(taxa) : "—") + '</span></div>'
+        : "") +
+      '<div class="cart-summary-row"><span>Total</span><span class="num">' + brl(total) + '</span></div>' +
+      '<button class="btn-primary" id="sendOrderBtn">Enviar pedido pelo WhatsApp</button>' +
+      '<p class="badge-note">Ao continuar, seu pedido completo será aberto em uma conversa do WhatsApp para confirmação.</p>';
+
+    document.getElementById("sendOrderBtn").addEventListener("click", trySendOrder);
   }
 
   function atualizarPagamentoUI(){
@@ -470,6 +654,7 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     var endereco = deliveryType === "entrega" ? document.getElementById("inputEndereco").value.trim() : "";
     var telefone = document.getElementById("inputTelefone").value.trim();
     var data = document.getElementById("inputData").value;
+    var hora = document.getElementById("inputHora").value;
     var obs = document.getElementById("inputObs").value.trim();
 
     var valid = true;
@@ -479,26 +664,41 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
       else { f.classList.remove("invalid"); }
     }
     setInvalid("fieldNome", nome.length === 0);
-    if (deliveryType === "entrega") setInvalid("fieldEndereco", endereco.length === 0);
+    if (deliveryType === "entrega"){
+      setInvalid("fieldEndereco", endereco.length === 0);
+      setInvalid("fieldBairro", !selectedBairroId);
+    }
     setInvalid("fieldTelefone", telefone.length < 8);
     setInvalid("fieldPagamento", !paymentMethod);
 
-    var dataField = document.getElementById("inputData");
+   var dataField = document.getElementById("inputData");
     if (!data){ dataField.style.borderColor = "var(--red)"; valid = false; }
     else { dataField.style.borderColor = ""; }
 
+    var horaField = document.getElementById("inputHora");
+    if (!hora){ horaField.style.borderColor = "var(--red)"; valid = false; }
+    else { horaField.style.borderColor = ""; }
+
     if (!valid){ showToast("Confira os campos destacados"); return; }
 
-    var msg = buildWhatsAppMessage({ nome: nome, endereco: endereco, telefone: telefone, data: data, obs: obs });
+    var msg = buildWhatsAppMessage({ nome: nome, endereco: endereco, telefone: telefone, data: data, hora: hora, obs: obs });
     var url = "https://wa.me/" + WHATSAPP_NUMBER + "?text=" + encodeURIComponent(msg);
     window.open(url, "_blank");
 
+    if (appliedCoupon){
+      var client = getSupabaseClient();
+      if (client){
+        client.rpc("registrar_uso_cupom", { p_cupom_id: appliedCoupon.cupom_id, p_telefone: telefone });
+      }
+    }
+
     cart = [];
+    appliedCoupon = null;
+    selectedBairroId = null;
     renderFloatingCart();
     closeCheckout();
     showToast("Pedido enviado! Confirme no WhatsApp.");
   }
-
   function formatDateBR(iso){
     if (!iso) return "";
     var parts = iso.split("-");
@@ -515,14 +715,29 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
       var opt = kit.opcoes[item.optIndex];
       lines.push("• " + item.qty + "x " + kit.nome + " (" + opt.label + ") — " + brl(opt.preco * item.qty));
     });
+   lines.push("");
+    var descontoMsg = calcularDesconto();
+    var taxaMsg = taxaEntregaAtual();
+    if (appliedCoupon || (deliveryType === "entrega" && taxaMsg > 0)){
+      lines.push("Subtotal: " + brl(cartTotal()));
+      if (appliedCoupon){ lines.push("Cupom aplicado (" + appliedCoupon.codigo + "): -" + brl(descontoMsg)); }
+      if (deliveryType === "entrega"){ lines.push("Taxa de entrega: " + (taxaMsg === 0 ? "Grátis" : brl(taxaMsg))); }
+      lines.push("*Total: " + brl(cartTotal() - descontoMsg + taxaMsg) + "*");
+    } else {
+      lines.push("*Total: " + brl(cartTotal()) + "*");
+    }
     lines.push("");
-    lines.push("*Total: " + brl(cartTotal()) + "*");
-    lines.push("");
+
+
     lines.push("*Tipo:* " + (deliveryType === "entrega" ? "Entrega" : "Retirada"));
     lines.push("*Nome:* " + data.nome);
-    if (deliveryType === "entrega"){ lines.push("*Endereço:* " + data.endereco); }
+    if (deliveryType === "entrega"){
+      lines.push("*Endereço:* " + data.endereco);
+      var bairroSel = findBairro(selectedBairroId);
+      lines.push("*Bairro:* " + (bairroSel ? bairroSel.nome : ""));
+    }
     lines.push("*Telefone:* " + data.telefone);
-    lines.push("*Data desejada:* " + formatDateBR(data.data));
+    lines.push("*Data desejada:* " + formatDateBR(data.data) + " às " + data.hora);
     lines.push("*Pagamento:* " + paymentMethod);
     if (data.obs){ lines.push("*Observações:* " + data.obs); }
     return lines.join("\n");
@@ -573,9 +788,11 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
 
   // Mostra o cardápio imediatamente com os dados locais (fallback) e,
   // se o Supabase estiver configurado, atualiza assim que os dados reais chegarem.
-  renderMenu();
+ renderMenu();
   if (supabaseConfigurado()){
     document.getElementById("menuList").innerHTML = '<p style="text-align:center; color:var(--cream-dim); font-size:0.85rem;">Carregando cardápio...</p>';
     carregarKitsDoSupabase().then(function(){ renderMenu(); });
+    carregarPromocaoAtiva();
+    carregarBairros();
   }
 })();

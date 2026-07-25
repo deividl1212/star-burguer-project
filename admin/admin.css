@@ -132,3 +132,19 @@ a{color:var(--gold); text-decoration:none;}
 }
 
 .hint{font-size:0.72rem; color:var(--cream-dim); margin-top:-8px; margin-bottom:14px; line-height:1.4;}
+/* ---------- Abas ---------- */
+.admin-tabs{ display:flex; gap:10px; margin-bottom:20px; }
+.admin-tab{
+  background:var(--bg-elev-2); border:1px solid var(--line); color:var(--cream-dim);
+  padding:9px 20px; border-radius:var(--radius-pill); font-size:0.85rem; font-weight:600;
+}
+.admin-tab.active{ border-color:var(--gold); color:var(--gold); background:rgba(245,179,25,0.08); }
+
+/* ---------- Seleção de kits no cupom ---------- */
+.cupom-kits-list{
+  display:flex; flex-direction:column; gap:8px;
+  max-height:180px; overflow-y:auto;
+  border:1px solid var(--line); border-radius:10px; padding:10px;
+}
+.cupom-kit-check{ display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--cream); }
+.cupom-kit-check input{ width:16px; height:16px; }

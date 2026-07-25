@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -42,12 +43,38 @@
   </header>
 
   <main class="admin-main">
-    <div class="admin-toolbar">
-      <h2>Kits cadastrados</h2>
-      <button class="btn-primary btn-sm" id="btnNovoKit">+ Novo kit</button>
+    <div class="admin-tabs">
+      <button class="admin-tab active" id="tabKits">Kits</button>
+      <button class="admin-tab" id="tabCupons">Cupons</button>
+      <button class="admin-tab" id="tabPromocoes">Promoção</button>
     </div>
-    <p class="admin-msg" id="adminMsg"></p>
-    <div id="kitsList" class="kits-list"></div>
+
+    <div id="kitsSection">
+      <div class="admin-toolbar">
+        <h2>Kits cadastrados</h2>
+        <button class="btn-primary btn-sm" id="btnNovoKit">+ Novo kit</button>
+      </div>
+      <p class="admin-msg" id="adminMsg"></p>
+      <div id="kitsList" class="kits-list"></div>
+    </div>
+
+    <div id="cupomsSection" class="hidden">
+      <div class="admin-toolbar">
+        <h2>Cupons de desconto</h2>
+        <button class="btn-primary btn-sm" id="btnNovoCupom">+ Novo cupom</button>
+      </div>
+      <p class="admin-msg" id="cupomMsgAdmin"></p>
+      <div id="cupomsList" class="kits-list"></div>
+    </div>
+
+    <div id="promocoesSection" class="hidden">
+      <div class="admin-toolbar">
+        <h2>Promoção (brinde)</h2>
+        <button class="btn-primary btn-sm" id="btnNovaPromocao">+ Nova promoção</button>
+      </div>
+      <p class="admin-msg" id="promocaoMsgAdmin"></p>
+      <div id="promocoesList" class="kits-list"></div>
+    </div>
   </main>
 </div>
 
