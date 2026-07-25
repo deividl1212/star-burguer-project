@@ -8,14 +8,21 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
+
+<!-- Ícones para navegador e "adicionar à tela inicial" -->
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0c0a0a">
 </head>
 <body>
-
 <!-- ================= WELCOME SCREEN ================= -->
 <div class="welcome-screen" id="welcomeScreen">
   <div class="embers" id="embersWelcome"></div>
   <div class="welcome-inner">
-    <svg class="welcome-logo" viewBox="0 0 100 100"><use href="#logo-flame"/></svg>
+    <img class="welcome-logo" src="/logo.png" alt="Star Burguer">
     <h1>Seja bem-vindo à<span>Star Burguer</span></h1>
     <p>Hambúrgueres gourmet em kit, prontos para montar. Sabor de restaurante no conforto da sua casa.</p>
    <div class="welcome-actions">
@@ -45,7 +52,7 @@
 
   <header class="topbar">
     <button class="brand" id="brandHome" aria-label="Voltar ao início">
-      <svg viewBox="0 0 100 100"><use href="#logo-flame"/></svg>
+      <img src="/logo.png" alt="Star Burguer" style="width:32px; height:32px; object-fit:contain;">
       <span>STAR BURGUER</span>
     </button>
     <div class="nav-icons">
@@ -70,7 +77,7 @@
 
   <section class="hero">
     <div class="embers" id="embers"></div>
-    <svg class="hero-logo" viewBox="0 0 100 100"><use href="#logo-flame"/></svg>
+    <img class="hero-logo" src="/logo.png" alt="Star Burguer">
     <h1>STAR<br><span>BURGUER</span></h1>
     <p>Hambúrgueres gourmet em kit, prontos para montar. Sabor de restaurante no conforto da sua casa.</p>
   </section>
@@ -87,7 +94,7 @@
   </main>
 
   <footer>
-    <svg class="flame-mini" viewBox="0 0 100 100"><use href="#logo-flame"/></svg>
+    <img class="flame-mini" src="/logo.png" alt="Star Burguer">
     Star Burguer · Peça pelo site, receba a confirmação no WhatsApp
   </footer>
 

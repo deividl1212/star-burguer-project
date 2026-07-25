@@ -57,7 +57,7 @@
     width:100%;
     text-align:center;
   }
-  .welcome-logo{width:120px; height:120px; margin:0 auto 20px;}
+  .welcome-logo{width:120px; height:120px; margin:0 auto 20px; object-fit:contain;}
   .welcome-inner h1{
     font-size:clamp(1.9rem, 8vw, 2.5rem);
     color:var(--cream);
@@ -167,7 +167,7 @@
     90%{opacity:0.4;}
     100%{ transform:translateY(-320px) translateX(var(--drift,10px)); opacity:0; }
   }
-  .hero-logo{width:112px; height:112px; margin:0 auto 14px; position:relative; z-index:2;}
+  .hero-logo{width:112px; height:112px; margin:0 auto 14px; position:relative; z-index:2; object-fit:contain;}
   .hero h1{font-size:clamp(2.1rem,9vw,2.6rem); color:var(--cream); position:relative; z-index:2;}
   .hero h1 span{color:var(--gold);}
   .hero p{
@@ -265,7 +265,7 @@
     font-size:0.72rem;
     color:var(--cream-dim);
   }
-  footer .flame-mini{width:26px; height:26px; margin:0 auto 8px; opacity:0.8;}
+  footer .flame-mini{width:26px; height:26px; margin:0 auto 8px; opacity:0.8; object-fit:contain;}
 
   /* ---------- Floating cart bar ---------- */
   .floating-cart{
