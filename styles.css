@@ -667,12 +667,47 @@
   color:var(--cream-dim);
 }
 /* ---------- Adicionais do kit ---------- */
-.adicionais-list{ display:flex; flex-direction:column; gap:8px; margin-bottom:18px; }
+.adicionais-list{ display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
 .adicional-item{
   display:flex; align-items:center; justify-content:space-between;
-  border:1.5px solid var(--line); border-radius:12px; padding:10px 14px;
+  border:1.5px solid var(--line); border-radius:14px; padding:12px 14px;
   cursor:pointer;
+  transition:border-color 0.15s ease, background 0.15s ease;
 }
-.adicional-check-label{ display:flex; align-items:center; gap:10px; font-size:0.88rem; }
-.adicional-check-label input{ width:16px; height:16px; }
-.adicional-preco{ color:var(--gold); font-size:0.85rem; }
+.adicional-item:has(input:checked){
+  border-color:var(--gold);
+  background:rgba(245,179,25,0.08);
+}
+.adicional-check-label{ display:flex; align-items:center; gap:12px; font-size:0.88rem; }
+
+/* Checkbox customizado */
+.adicional-check-label input[type="checkbox"]{
+  appearance:none;
+  -webkit-appearance:none;
+  width:22px; height:22px;
+  flex:0 0 auto;
+  border-radius:7px;
+  border:2px solid var(--cream-dim);
+  background:var(--bg-elev-2);
+  position:relative;
+  cursor:pointer;
+  transition:border-color 0.15s ease, background 0.15s ease;
+}
+.adicional-check-label input[type="checkbox"]:checked{
+  border-color:var(--gold);
+  background:linear-gradient(135deg, var(--gold), var(--ember));
+}
+.adicional-check-label input[type="checkbox"]:checked::after{
+  content:'';
+  position:absolute;
+  left:6px; top:2px;
+  width:6px; height:11px;
+  border:solid #1a1414;
+  border-width:0 2.5px 2.5px 0;
+  transform:rotate(45deg);
+}
+.adicional-check-label input[type="checkbox"]:hover{
+  border-color:var(--gold);
+}
+
+.adicional-preco{ color:var(--gold); font-size:0.88rem; font-weight:600; }

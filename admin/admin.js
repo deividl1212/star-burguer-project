@@ -686,9 +686,11 @@
 
 /* ============ ADICIONAIS (KITS 6 E 10) ============ */
   function loadAdicionais(){
+    var list2 = document.getElementById("adicionais2List");
     var list6 = document.getElementById("adicionais6List");
     var list10 = document.getElementById("adicionais10List");
-    list6.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Carregando...</p>';
+    list2.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Carregando...</p>';
+    list6.innerHTML = "";
     list10.innerHTML = "";
     supabase
       .from("adicionais")
@@ -706,8 +708,10 @@
   }
 
   function renderAdicionaisList(){
+    var list2 = document.getElementById("adicionais2List");
     var list6 = document.getElementById("adicionais6List");
     var list10 = document.getElementById("adicionais10List");
+    var itens2 = adicionaisCache.filter(function(a){ return a.tamanho === "2"; });
     var itens6 = adicionaisCache.filter(function(a){ return a.tamanho === "6"; });
     var itens10 = adicionaisCache.filter(function(a){ return a.tamanho === "10"; });
 
@@ -727,6 +731,7 @@
       );
     }
 
+   list2.innerHTML = itens2.length ? itens2.map(itemHTML).join("") : '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum adicional cadastrado para kits de 2.</p>';
     list6.innerHTML = itens6.length ? itens6.map(itemHTML).join("") : '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum adicional cadastrado para kits de 6.</p>';
     list10.innerHTML = itens10.length ? itens10.map(itemHTML).join("") : '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum adicional cadastrado para kits de 10.</p>';
 
@@ -778,6 +783,7 @@
       '<div class="form-row">' +
         '<div class="field"><label>Preço (R$)</label><input type="number" step="0.01" id="fAdicPreco" value="' + (a ? a.preco : "") + '" placeholder="0,00"></div>' +
         '<div class="field"><label>Para qual kit</label><select id="fAdicTamanho">' +
+          '<option value="2" ' + (a && a.tamanho === "2" ? "selected" : "") + '>Kits de 2</option>' +
           '<option value="6" ' + (a && a.tamanho === "6" ? "selected" : "") + '>Kits de 6</option>' +
           '<option value="10" ' + (a && a.tamanho === "10" ? "selected" : "") + '>Kits de 10</option>' +
         '</select></div>' +
