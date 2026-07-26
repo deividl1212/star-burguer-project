@@ -109,7 +109,7 @@
     kitsList.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Carregando...</p>';
     supabase
       .from("kits")
-      .select("id, nome, descricao, tier, ativo, ordem, destaque, kit_opcoes ( id, label, preco, itens, ordem )")
+     .select("id, nome, descricao, tier, ativo, ordem, destaque, kit_opcoes ( id, label, preco, preco_promocional, itens, ordem )")
       .order("destaque", { ascending: false })
       .order("ordem", { ascending: true })
       .then(function(res){
@@ -234,8 +234,8 @@
     formOverlay.classList.remove("open");
   }
 
-  function opcaoCardHTML(opcao, idx){
-    opcao = opcao || { label: "", preco: "", itens: [] };
+ function opcaoCardHTML(opcao, idx){
+    opcao = opcao || { label: "", preco: "", itens: [], preco_promocional: "" };
     var itensTexto = (opcao.itens || []).join("\n");
     return (
       '<div class="opcao-card" data-idx="' + idx + '">' +
@@ -243,6 +243,9 @@
         '<div class="form-row">' +
           '<div class="field"><label>Rótulo da opção</label><input type="text" class="opcao-label" value="' + (opcao.label || "").replace(/"/g,"&quot;") + '" placeholder="Ex: 6 Carnes"></div>' +
           '<div class="field"><label>Preço (R$)</label><input type="number" step="0.01" class="opcao-preco" value="' + (opcao.preco !== "" ? opcao.preco : "") + '" placeholder="0,00"></div>' +
+        '</div>' +
+        '<div class="field"><label>Preço promocional (opcional)</label><input type="number" step="0.01" class="opcao-preco-promo" value="' + (opcao.preco_promocional != null ? opcao.preco_promocional : "") + '" placeholder="Deixe em branco se não houver promoção">' +
+          '<span class="hint" style="margin-top:4px;">Se preenchido, o site mostra o preço normal riscado e este em destaque.</span>' +
         '</div>' +
         '<div class="field"><label>Itens inclusos (um por linha)</label><textarea class="opcao-itens" rows="4" placeholder="6 Carnes Bovina de 160g&#10;6 Pães Brioche&#10;Molhos">' + itensTexto + '</textarea></div>' +
       '</div>'
@@ -314,18 +317,22 @@
     opcaoCards.forEach(function(card, i){
       var label = card.querySelector(".opcao-label").value.trim();
       var precoStr = card.querySelector(".opcao-preco").value;
+      var precoPromoStr = card.querySelector(".opcao-preco-promo").value;
       var itensTexto = card.querySelector(".opcao-itens").value;
       var preco = parseFloat(precoStr);
+      var precoPromo = precoPromoStr.trim() === "" ? null : parseFloat(precoPromoStr);
       if (!label || isNaN(preco)){ opcoesValidas = false; }
+      if (precoPromo !== null && (isNaN(precoPromo) || precoPromo <= 0 || precoPromo >= preco)){
+        opcoesValidas = false;
+      }
       var itens = itensTexto.split("\n").map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
-      opcoes.push({ label: label, preco: preco, itens: itens, ordem: i });
+      opcoes.push({ label: label, preco: preco, preco_promocional: precoPromo, itens: itens, ordem: i });
     });
 
     if (!opcoesValidas || opcoes.length === 0){
-      showMsg("Preencha rótulo e preço em todas as opções.", true);
+      showMsg("Preencha rótulo e preço em todas as opções. O preço promocional (se usado) deve ser menor que o preço normal.", true);
       return;
     }
-
    var kitPayload = { nome: nome, descricao: descricao, tier: tier, ativo: ativo, destaque: destaque };
 
     if (editingKitId){
@@ -346,7 +353,7 @@
     supabase.from("kit_opcoes").delete().eq("kit_id", kitId).then(function(res){
       if (res.error){ showMsg("Erro ao salvar opções: " + res.error.message, true); return; }
       var novasOpcoes = opcoes.map(function(o){
-        return { kit_id: kitId, label: o.label, preco: o.preco, itens: o.itens, ordem: o.ordem };
+        return { kit_id: kitId, label: o.label, preco: o.preco, preco_promocional: o.preco_promocional, itens: o.itens, ordem: o.ordem };
       });
       supabase.from("kit_opcoes").insert(novasOpcoes).then(function(res2){
         if (res2.error){ showMsg("Erro ao salvar opções: " + res2.error.message, true); return; }

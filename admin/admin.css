@@ -148,3 +148,22 @@ a{color:var(--gold); text-decoration:none;}
 }
 .cupom-kit-check{ display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--cream); }
 .cupom-kit-check input{ width:16px; height:16px; }
+
+/* ---------- Crédito de desenvolvimento ---------- */
+.dev-credit{
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  margin-top:14px;
+  font-size:0.7rem;
+  color:var(--cream-dim);
+  opacity:0.8;
+}
+.dev-badge{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:14px; height:14px;
+  border-radius:50%;
+  background:linear-gradient(135deg, var(--gold), var(--red));
+  color:#fff;
+  font-size:0.6rem;
+  font-weight:700;
+  line-height:1;
+}

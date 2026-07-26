@@ -92,7 +92,7 @@
 
     return client
       .from("kits")
-      .select("id, nome, descricao, tier, ativo, ordem, destaque, kit_opcoes ( id, label, preco, itens, ordem )")
+      .select("id, nome, descricao, tier, ativo, ordem, destaque, kit_opcoes ( id, label, preco, preco_promocional, itens, ordem )")
       .eq("ativo", true)
       .order("destaque", { ascending: false })
       .order("ordem", { ascending: true })
@@ -112,7 +112,7 @@
             desc: row.descricao,
             destaque: !!row.destaque,
             opcoes: opcoesOrdenadas.map(function(o){
-              return { label: o.label, preco: Number(o.preco), itens: o.itens || [] };
+              return { label: o.label, preco: Number(o.preco), precoPromocional: o.preco_promocional != null ? Number(o.preco_promocional) : null, itens: o.itens || [] };
             })
           };
         });
@@ -328,10 +328,12 @@
   /* ============ RENDER: MENU ============ */
   function renderMenu(){
     var list = document.getElementById("menuList");
-    list.innerHTML = KITS.map(function(kit){
-      var precos = kit.opcoes.map(function(o){ return o.preco; });
-      var min = Math.min.apply(null, precos);
+   list.innerHTML = KITS.map(function(kit){
+      var precosEfetivos = kit.opcoes.map(function(o){ return o.precoPromocional != null ? o.precoPromocional : o.preco; });
+      var min = Math.min.apply(null, precosEfetivos);
       var multi = kit.opcoes.length > 1;
+      var opcaoDoMenorPreco = kit.opcoes[precosEfetivos.indexOf(min)];
+      var temPromo = opcaoDoMenorPreco.precoPromocional != null;
       return (
         '<div class="kit-card ' + (kit.tier === "premium" ? "tier-premium" : "") + (kit.destaque ? " kit-destaque" : "") + '" data-kit="' + kit.id + '">' +
           (kit.destaque ? '<span class="destaque-badge">🔥 Oferta da semana</span>' : '') +
@@ -342,7 +344,8 @@
             '<h3>' + kit.nome + '</h3>' +
             '<span class="kit-tag">' + kit.opcoes.map(function(o){return o.label;}).join(" · ") + '</span>' +
             '<div class="price-row">' +
-              '<span class="price-pill num">' + (multi ? "a partir de " : "") + brl(min) + '</span>' +
+              (temPromo ? '<span class="price-old num">' + brl(opcaoDoMenorPreco.preco) + '</span>' : "") +
+              '<span class="price-pill num ' + (temPromo ? "price-promo" : "") + '">' + (multi ? "a partir de " : "") + brl(min) + '</span>' +
             '</div>' +
             '<button class="kit-cta" data-open="' + kit.id + '">Ver kit</button>' +
           '</div>' +
@@ -378,13 +381,25 @@
         (kit.opcoes.length > 1 ?
           '<div class="option-list" id="optionList">' +
             kit.opcoes.map(function(o, i){
+              var precoEfetivo = o.precoPromocional != null ? o.precoPromocional : o.preco;
+              var temPromo = o.precoPromocional != null;
               return '<div class="option ' + (i === activeOptIndex ? "selected" : "") + '" data-opt="' + i + '">' +
                 '<span class="option-label"><span class="radio"></span>' + o.label + '</span>' +
-                '<span class="option-price num">' + brl(o.preco) + '</span>' +
+                '<span class="option-price-wrap">' +
+                  (temPromo ? '<span class="price-old num" style="font-size:0.78rem;">' + brl(o.preco) + '</span>' : "") +
+                  '<span class="option-price num ' + (temPromo ? "price-promo" : "") + '">' + brl(precoEfetivo) + '</span>' +
+                '</span>' +
               '</div>';
             }).join("") +
           '</div>'
-          : '<div class="price-row" style="margin-bottom:16px;"><span class="price-pill num" style="font-size:1.1rem;">' + brl(opt.preco) + '</span></div>'
+          : (function(){
+              var precoEfetivo = opt.precoPromocional != null ? opt.precoPromocional : opt.preco;
+              var temPromo = opt.precoPromocional != null;
+              return '<div class="price-row" style="margin-bottom:16px;">' +
+                (temPromo ? '<span class="price-old num" style="font-size:0.95rem;">' + brl(opt.preco) + '</span>' : "") +
+                '<span class="price-pill num ' + (temPromo ? "price-promo" : "") + '" style="font-size:1.1rem;">' + brl(precoEfetivo) + '</span>' +
+              '</div>';
+            })()
         ) +
         '<div class="includes-title">O que está incluso</div>' +
         '<ul class="includes">' + opt.itens.map(function(it){ return "<li>" + it + "</li>"; }).join("") + '</ul>' +
@@ -486,7 +501,7 @@
       var a = findAdicional(id);
       return sum + (a ? Number(a.preco) : 0);
     }, 0);
-    return opt.preco + extras;
+    return precoEfetivoOpcao(opt) + extras;
   }
 
   function cartTotal(){
