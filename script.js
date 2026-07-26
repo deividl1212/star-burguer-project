@@ -131,6 +131,8 @@
   var activeQty = 1;
   var deliveryType = "entrega"; // ou "retirada"
   var paymentMethod = null;
+  var needsChange = null; // true = precisa troco, false = não precisa, null = não escolhido ainda
+  var trocoPara = "";
   var appliedCoupon = null; // { cupom_id, codigo, tipo_desconto, valor, aplica_todos_kits, kits_aplicaveis }
   var bairrosCache = [];
   var selectedBairroId = null;
@@ -578,6 +580,18 @@
         '<span class="error-text">Escolha a forma de pagamento.</span>' +
       '</div>' +
 
+      '<div class="field" id="fieldTroco" style="display:' + (paymentMethod==="Dinheiro"?"block":"none") + '">' +
+        '<label>Precisa de troco?</label>' +
+        '<div class="toggle-row">' +
+          '<button type="button" class="toggle-btn ' + (needsChange===true?"active":"") + '" id="toggleTrocoSim">Sim</button>' +
+          '<button type="button" class="toggle-btn ' + (needsChange===false?"active":"") + '" id="toggleTrocoNao">Não</button>' +
+        '</div>' +
+        '<div class="field" id="fieldTrocoValor" style="display:' + (needsChange===true?"block":"none") + '; margin-top:10px;">' +
+          '<label>Troco para quanto?</label><input type="number" step="0.01" id="inputTrocoPara" placeholder="Ex: 100" value="' + (trocoPara || "") + '">' +
+          '<span class="error-text">Informe o valor para o troco.</span>' +
+        '</div>' +
+      '</div>' +
+
       '<div class="field"><label>Observações (opcional)</label><textarea id="inputObs" placeholder="Ex: sem cebola, entregar na portaria..."></textarea></div>' +
       '</div>' +
       '<div class="sheet-footer" id="checkoutFooter"></div>';
@@ -738,6 +752,44 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     document.getElementById("checkoutSheet").querySelectorAll("[data-pay]").forEach(function(el){
       el.classList.toggle("active", el.getAttribute("data-pay") === paymentMethod);
     });
+    if (paymentMethod !== "Dinheiro"){
+      needsChange = null;
+      trocoPara = "";
+    }
+    renderTrocoField();
+  }
+
+  function renderTrocoField(){
+    var field = document.getElementById("fieldTroco");
+    if (!field) return;
+    field.style.display = paymentMethod === "Dinheiro" ? "block" : "none";
+
+    field.innerHTML =
+      '<label>Precisa de troco?</label>' +
+      '<div class="toggle-row">' +
+        '<button type="button" class="toggle-btn ' + (needsChange===true?"active":"") + '" id="toggleTrocoSim">Sim</button>' +
+        '<button type="button" class="toggle-btn ' + (needsChange===false?"active":"") + '" id="toggleTrocoNao">Não</button>' +
+      '</div>' +
+      '<div class="field" id="fieldTrocoValor" style="display:' + (needsChange===true?"block":"none") + '; margin-top:10px;">' +
+        '<label>Troco para quanto?</label><input type="number" step="0.01" id="inputTrocoPara" placeholder="Ex: 100" value="' + (trocoPara || "") + '">' +
+        '<span class="error-text">Informe o valor para o troco.</span>' +
+      '</div>';
+
+    document.getElementById("toggleTrocoSim").addEventListener("click", function(){
+      needsChange = true;
+      renderTrocoField();
+    });
+    document.getElementById("toggleTrocoNao").addEventListener("click", function(){
+      needsChange = false;
+      trocoPara = "";
+      renderTrocoField();
+    });
+    var inputTrocoPara = document.getElementById("inputTrocoPara");
+    if (inputTrocoPara){
+      inputTrocoPara.addEventListener("input", function(){
+        trocoPara = this.value;
+      });
+    }
   }
 
   function trySendOrder(){
@@ -763,6 +815,9 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     }
     setInvalid("fieldTelefone", telefone.length < 8);
     setInvalid("fieldPagamento", !paymentMethod);
+    if (paymentMethod === "Dinheiro" && needsChange === true){
+      setInvalid("fieldTrocoValor", !trocoPara || parseFloat(trocoPara) <= 0);
+    }
 
    var dataField = document.getElementById("inputData");
     if (!data){ dataField.style.borderColor = "var(--red)"; valid = false; }
@@ -788,6 +843,8 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     cart = [];
     appliedCoupon = null;
     selectedBairroId = null;
+    needsChange = null;
+    trocoPara = "";
     renderFloatingCart();
     closeCheckout();
     showToast("Pedido enviado! Confirme no WhatsApp.");
@@ -829,10 +886,20 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
       var bairroSel = findBairro(selectedBairroId);
       lines.push("*Bairro:* " + (bairroSel ? bairroSel.nome : ""));
     }
-    
+
     lines.push("*Telefone:* " + data.telefone);
     lines.push("*Data desejada:* " + formatDateBR(data.data) + " às " + data.hora);
-    lines.push("*Pagamento:* " + paymentMethod);
+    if (paymentMethod === "Dinheiro"){
+      if (needsChange === true && trocoPara){
+        lines.push("*Pagamento:* Dinheiro (troco para " + brl(parseFloat(trocoPara)) + ")");
+      } else if (needsChange === false){
+        lines.push("*Pagamento:* Dinheiro (sem troco)");
+      } else {
+        lines.push("*Pagamento:* " + paymentMethod);
+      }
+    } else {
+      lines.push("*Pagamento:* " + paymentMethod);
+    }
     if (data.obs){ lines.push("*Observações:* " + data.obs); }
     return lines.join("\n");
   }
