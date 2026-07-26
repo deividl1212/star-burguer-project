@@ -1030,7 +1030,12 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     if (appliedCoupon){
       var client = getSupabaseClient();
       if (client){
-        client.rpc("registrar_uso_cupom", { p_cupom_id: appliedCoupon.cupom_id, p_telefone: telefone });
+        client.rpc("registrar_uso_cupom", { p_cupom_id: appliedCoupon.cupom_id, p_telefone: telefone })
+          .then(function(res){
+            if (res.error){
+              console.warn("Erro ao registrar uso do cupom:", res.error);
+            }
+          });
       }
     }
 
