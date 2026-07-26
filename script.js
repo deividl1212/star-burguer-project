@@ -497,16 +497,7 @@
         '<div class="field"><label>Horário desejado</label><input type="time" id="inputHora"><span class="error-text">Escolha um horário.</span></div>' +
       '</div>' +
 
-      '<div class="field"><label>Cupom de desconto (opcional)</label>' +
-        '<div class="cupom-row">' +
-          '<input type="text" id="inputCupom" placeholder="Digite o código" value="' + (appliedCoupon ? appliedCoupon.codigo : "") + '" ' + (appliedCoupon ? "disabled" : "") + '>' +
-          (appliedCoupon
-            ? '<button type="button" class="btn-cupom-remove" id="btnRemoverCupom">Remover</button>'
-            : '<button type="button" class="btn-cupom-aplicar" id="btnAplicarCupom">Aplicar</button>') +
-        '</div>' +
-        '<span class="cupom-msg" id="cupomMsg" style="color:' + (appliedCoupon ? "var(--gold)" : "var(--red)") + ';">' + (appliedCoupon ? "Cupom aplicado: -" + (appliedCoupon.tipo_desconto === "percentual" ? appliedCoupon.valor + "%" : brl(appliedCoupon.valor)) : "") + '</span>' +
-      '</div>' +
-
+      '<div class="field" id="cupomFieldWrap"></div>' +
       '<div class="field" id="fieldPagamento"><label>Forma de pagamento</label>' +
         '<div class="pay-grid">' +
           '<div class="pay-opt ' + (paymentMethod==="Pix"?"active":"") + '" data-pay="Pix">Pix</div>' +
@@ -535,17 +526,7 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
       });
     });
 
-    var btnAplicarCupom = document.getElementById("btnAplicarCupom");
-    if (btnAplicarCupom){
-      btnAplicarCupom.addEventListener("click", aplicarCupom);
-    }
-    var btnRemoverCupom = document.getElementById("btnRemoverCupom");
-    if (btnRemoverCupom){
-      btnRemoverCupom.addEventListener("click", function(){
-        appliedCoupon = null;
-        renderCheckoutSheet();
-      });
-    }
+    renderCupomField();
 
     var inputBairro = document.getElementById("inputBairro");
     if (inputBairro){
@@ -563,6 +544,33 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     }
 
     renderCheckoutFooter();
+  }
+
+  function renderCupomField(){
+    var wrap = document.getElementById("cupomFieldWrap");
+    if (!wrap) return;
+    wrap.innerHTML =
+      '<label>Cupom de desconto (opcional)</label>' +
+      '<div class="cupom-row">' +
+        '<input type="text" id="inputCupom" placeholder="Digite o código" value="' + (appliedCoupon ? appliedCoupon.codigo : "") + '" ' + (appliedCoupon ? "disabled" : "") + '>' +
+        (appliedCoupon
+          ? '<button type="button" class="btn-cupom-remove" id="btnRemoverCupom">Remover</button>'
+          : '<button type="button" class="btn-cupom-aplicar" id="btnAplicarCupom">Aplicar</button>') +
+      '</div>' +
+      '<span class="cupom-msg" id="cupomMsg" style="color:' + (appliedCoupon ? "var(--gold)" : "var(--red)") + ';">' + (appliedCoupon ? "Cupom aplicado: -" + (appliedCoupon.tipo_desconto === "percentual" ? appliedCoupon.valor + "%" : brl(appliedCoupon.valor)) : "") + '</span>';
+
+    var btnAplicarCupom = document.getElementById("btnAplicarCupom");
+    if (btnAplicarCupom){
+      btnAplicarCupom.addEventListener("click", aplicarCupom);
+    }
+    var btnRemoverCupom = document.getElementById("btnRemoverCupom");
+    if (btnRemoverCupom){
+      btnRemoverCupom.addEventListener("click", function(){
+        appliedCoupon = null;
+        renderCupomField();
+        renderCheckoutFooter();
+      });
+    }
   }
 
   function aplicarCupom(){
@@ -587,7 +595,8 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
         return;
       }
       appliedCoupon = res.data;
-      renderCheckoutSheet();
+      renderCupomField();
+      renderCheckoutFooter();
     });
   }
 
