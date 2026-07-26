@@ -666,3 +666,13 @@
   min-height:16px;
   color:var(--cream-dim);
 }
+/* ---------- Adicionais do kit ---------- */
+.adicionais-list{ display:flex; flex-direction:column; gap:8px; margin-bottom:18px; }
+.adicional-item{
+  display:flex; align-items:center; justify-content:space-between;
+  border:1.5px solid var(--line); border-radius:12px; padding:10px 14px;
+  cursor:pointer;
+}
+.adicional-check-label{ display:flex; align-items:center; gap:10px; font-size:0.88rem; }
+.adicional-check-label input{ width:16px; height:16px; }
+.adicional-preco{ color:var(--gold); font-size:0.85rem; }

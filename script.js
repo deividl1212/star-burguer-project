@@ -129,6 +129,8 @@
   var activeKitId = null;
   var activeOptIndex = 0;
   var activeQty = 1;
+  var activeAdicionais = []; // ids dos adicionais marcados no modal atual
+  var adicionaisCache = [];
   var deliveryType = "entrega"; // ou "retirada"
   var paymentMethod = null;
   var needsChange = null; // true = precisa troco, false = não precisa, null = não escolhido ainda
@@ -223,7 +225,38 @@
       });
   }
 
-  function findBairro(id){ return bairrosCache.find(function(b){ return b.id === id; }); }
+ function findBairro(id){ return bairrosCache.find(function(b){ return b.id === id; }); }
+
+  /* ============ ADICIONAIS ============ */
+  function carregarAdicionais(){
+    if (!supabaseConfigurado()) return;
+    var client = getSupabaseClient();
+    if (!client) return;
+
+    client
+      .from("adicionais")
+      .select("id, nome, preco, tamanho, ordem, ativo")
+      .eq("ativo", true)
+      .order("tamanho", { ascending: true })
+      .order("ordem", { ascending: true })
+      .then(function(res){
+        if (res.error || !res.data) return;
+        adicionaisCache = res.data;
+      });
+  }
+
+  function findAdicional(id){ return adicionaisCache.find(function(a){ return a.id === id; }); }
+
+  function tamanhoDaOpcao(label){
+    var m = (label || "").match(/\d+/);
+    return m ? m[0] : null;
+  }
+
+  function adicionaisParaOpcao(opt){
+    var tam = tamanhoDaOpcao(opt.label);
+    if (!tam) return [];
+    return adicionaisCache.filter(function(a){ return a.tamanho === tam; });
+  }
 
   function normalizarTexto(s){
     return (s || "")
@@ -329,10 +362,10 @@
     activeKitId = kitId;
     activeOptIndex = 0;
     activeQty = 1;
+    activeAdicionais = [];
     renderProductSheet(kit);
     document.getElementById("productOverlay").classList.add("open");
   }
-
   function renderProductSheet(kit){
     var sheet = document.getElementById("productSheet");
     var opt = kit.opcoes[activeOptIndex];
@@ -355,7 +388,19 @@
         ) +
         '<div class="includes-title">O que está incluso</div>' +
         '<ul class="includes">' + opt.itens.map(function(it){ return "<li>" + it + "</li>"; }).join("") + '</ul>' +
+        (adicionaisParaOpcao(opt).length > 0 ?
+          '<div class="includes-title">Adicionais (opcional)</div>' +
+          '<div class="adicionais-list" id="adicionaisList">' +
+            adicionaisParaOpcao(opt).map(function(a){
+              return '<label class="adicional-item">' +
+                '<span class="adicional-check-label"><input type="checkbox" class="adicionalCheckbox" value="' + a.id + '" ' + (activeAdicionais.indexOf(a.id) !== -1 ? "checked" : "") + '> ' + a.nome + '</span>' +
+                '<span class="adicional-preco num">+ ' + brl(Number(a.preco)) + '</span>' +
+              '</label>';
+            }).join("") +
+          '</div>'
+          : "") +
         '<div class="qty-row">' +
+
           '<span style="font-size:0.85rem; color:var(--cream-dim);">Quantidade</span>' +
           '<div class="qty-control">' +
             '<button id="qtyMinus">−</button><span id="qtyValue">' + activeQty + '</span><button id="qtyPlus">+</button>' +
@@ -381,37 +426,72 @@
     document.getElementById("qtyPlus").addEventListener("click", function(){
       activeQty++; updateQtyUI(kit);
     });
+    document.querySelectorAll(".adicionalCheckbox").forEach(function(chk){
+      chk.addEventListener("change", function(){
+        var id = this.value;
+        if (this.checked){
+          if (activeAdicionais.indexOf(id) === -1) activeAdicionais.push(id);
+        } else {
+          activeAdicionais = activeAdicionais.filter(function(x){ return x !== id; });
+        }
+        updateQtyUI(kit);
+      });
+    });
     document.getElementById("addToCartBtn").addEventListener("click", function(){
-      addToCart(kit.id, activeOptIndex, activeQty);
+      addToCart(kit.id, activeOptIndex, activeQty, activeAdicionais.slice());
       closeProduct();
       showToast("Adicionado ao pedido!");
     });
     updateQtyUI(kit);
   }
 
+  function precoAdicionaisSelecionados(){
+    return activeAdicionais.reduce(function(sum, id){
+      var a = findAdicional(id);
+      return sum + (a ? Number(a.preco) : 0);
+    }, 0);
+  }
+
   function updateQtyUI(kit){
     document.getElementById("qtyValue").textContent = activeQty;
     var opt = kit.opcoes[activeOptIndex];
-    document.getElementById("addToCartPrice").textContent = brl(opt.preco * activeQty);
+    var precoUnit = opt.preco + precoAdicionaisSelecionados();
+    document.getElementById("addToCartPrice").textContent = brl(precoUnit * activeQty);
   }
 
   function closeProduct(){
     document.getElementById("productOverlay").classList.remove("open");
   }
 
-  /* ============ CARRINHO ============ */
-  function addToCart(kitId, optIndex, qty){
-    var existing = cart.find(function(c){ return c.kitId === kitId && c.optIndex === optIndex; });
+ /* ============ CARRINHO ============ */
+  function chaveAdicionais(ids){
+    return (ids || []).slice().sort().join(",");
+  }
+
+  function addToCart(kitId, optIndex, qty, adicionaisIds){
+    adicionaisIds = adicionaisIds || [];
+    var chave = chaveAdicionais(adicionaisIds);
+    var existing = cart.find(function(c){
+      return c.kitId === kitId && c.optIndex === optIndex && chaveAdicionais(c.adicionaisIds) === chave;
+    });
     if (existing){ existing.qty += qty; }
-    else { cart.push({ kitId: kitId, optIndex: optIndex, qty: qty }); }
+    else { cart.push({ kitId: kitId, optIndex: optIndex, qty: qty, adicionaisIds: adicionaisIds }); }
     renderFloatingCart();
+  }
+
+  function precoUnitItem(item){
+    var kit = findKit(item.kitId);
+    var opt = kit.opcoes[item.optIndex];
+    var extras = (item.adicionaisIds || []).reduce(function(sum, id){
+      var a = findAdicional(id);
+      return sum + (a ? Number(a.preco) : 0);
+    }, 0);
+    return opt.preco + extras;
   }
 
   function cartTotal(){
     return cart.reduce(function(sum, item){
-      var kit = findKit(item.kitId);
-      var opt = kit.opcoes[item.optIndex];
-      return sum + opt.preco * item.qty;
+      return sum + precoUnitItem(item) * item.qty;
     }, 0);
   }
   function cartCount(){
@@ -463,12 +543,18 @@
         cart.map(function(item, idx){
           var kit = findKit(item.kitId);
           var opt = kit.opcoes[item.optIndex];
+          var nomesAdicionais = (item.adicionaisIds || []).map(function(id){
+            var a = findAdicional(id);
+            return a ? a.nome : null;
+          }).filter(Boolean);
           return '<div class="cart-item" data-idx="' + idx + '">' +
             '<svg class="cart-item-icon" viewBox="0 0 64 64"><use href="#burger-icon"/></svg>' +
             '<div class="cart-item-info">' +
               '<h4>' + kit.nome + '</h4>' +
-              '<span>' + opt.label + ' · ' + brl(opt.preco) + '</span>' +
+              '<span>' + opt.label + ' · ' + brl(precoUnitItem(item)) + '</span>' +
+              (nomesAdicionais.length ? '<span style="display:block; color:var(--gold);">+ ' + nomesAdicionais.join(", ") + '</span>' : "") +
             '</div>' +
+
             '<div class="cart-item-actions">' +
               '<button data-dec="' + idx + '">−</button>' +
               '<span class="num">' + item.qty + '</span>' +
@@ -863,7 +949,14 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     cart.forEach(function(item){
       var kit = findKit(item.kitId);
       var opt = kit.opcoes[item.optIndex];
-      lines.push("• " + item.qty + "x " + kit.nome + " (" + opt.label + ") — " + brl(opt.preco * item.qty));
+      var nomesAdicionais = (item.adicionaisIds || []).map(function(id){
+        var a = findAdicional(id);
+        return a ? a.nome : null;
+      }).filter(Boolean);
+      lines.push("• " + item.qty + "x " + kit.nome + " (" + opt.label + ") — " + brl(precoUnitItem(item) * item.qty));
+      if (nomesAdicionais.length){
+        lines.push("   + " + nomesAdicionais.join(", "));
+      }
     });
    lines.push("");
     var descontoMsg = calcularDesconto();
@@ -955,5 +1048,6 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     carregarKitsDoSupabase().then(function(){ renderMenu(); });
     carregarPromocaoAtiva();
     carregarBairros();
+    carregarAdicionais();
   }
 })();
