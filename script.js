@@ -467,13 +467,16 @@
     }, 0);
   }
 
+  function precoEfetivoOpcao(opt){
+    return opt.precoPromocional != null ? opt.precoPromocional : opt.preco;
+  }
+
   function updateQtyUI(kit){
     document.getElementById("qtyValue").textContent = activeQty;
     var opt = kit.opcoes[activeOptIndex];
-    var precoUnit = opt.preco + precoAdicionaisSelecionados();
+    var precoUnit = precoEfetivoOpcao(opt) + precoAdicionaisSelecionados();
     document.getElementById("addToCartPrice").textContent = brl(precoUnit * activeQty);
   }
-
   function closeProduct(){
     document.getElementById("productOverlay").classList.remove("open");
   }
