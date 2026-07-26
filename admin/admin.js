@@ -55,6 +55,10 @@
   var promocoesCache = [];
   var editingPromocaoId = null;
 
+  var adicionaisSection = document.getElementById("adicionaisSection");
+  var adicionalMsgAdmin = document.getElementById("adicionalMsgAdmin");
+  var adicionaisCache = [];
+  var editingAdicionalId = null;
   function showMsg(text, isError){
     adminMsg.textContent = text;
     adminMsg.style.color = isError ? "var(--red)" : "var(--cream-dim)";
@@ -194,15 +198,24 @@
     promocoesSection.classList.add("hidden");
     loadCupons();
   });
-  document.getElementById("tabPromocoes").addEventListener("click", function(){
+ document.getElementById("tabPromocoes").addEventListener("click", function(){
     setActiveTab("tabPromocoes");
     promocoesSection.classList.remove("hidden");
     kitsSection.classList.add("hidden");
     cupomsSection.classList.add("hidden");
+    adicionaisSection.classList.add("hidden");
     loadPromocoes();
   });
+  document.getElementById("tabAdicionais").addEventListener("click", function(){
+    setActiveTab("tabAdicionais");
+    adicionaisSection.classList.remove("hidden");
+    kitsSection.classList.add("hidden");
+    cupomsSection.classList.add("hidden");
+    promocoesSection.classList.add("hidden");
+    loadAdicionais();
+  });
   function setActiveTab(id){
-    ["tabKits","tabCupons","tabPromocoes"].forEach(function(t){
+    ["tabKits","tabCupons","tabPromocoes","tabAdicionais"].forEach(function(t){
       document.getElementById(t).classList.toggle("active", t === id);
     });
   }
@@ -211,9 +224,11 @@
     kitsSection.classList.remove("hidden");
     cupomsSection.classList.add("hidden");
     promocoesSection.classList.add("hidden");
+    adicionaisSection.classList.add("hidden");
   });
   document.getElementById("btnNovoCupom").addEventListener("click", function(){ openCupomForm(null); });
   document.getElementById("btnNovaPromocao").addEventListener("click", function(){ openPromocaoForm(null); });
+  document.getElementById("btnNovoAdicional").addEventListener("click", function(){ openAdicionalForm(null); });
 
   function closeForm(){
     formOverlay.classList.remove("open");
@@ -666,6 +681,139 @@
       closeForm();
       showPromocaoMsg("Promoção salva com sucesso!");
       loadPromocoes();
+    });
+  }
+
+/* ============ ADICIONAIS (KITS 6 E 10) ============ */
+  function loadAdicionais(){
+    var list6 = document.getElementById("adicionais6List");
+    var list10 = document.getElementById("adicionais10List");
+    list6.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Carregando...</p>';
+    list10.innerHTML = "";
+    supabase
+      .from("adicionais")
+      .select("id, nome, preco, tamanho, ordem, ativo")
+      .order("tamanho", { ascending: true })
+      .order("ordem", { ascending: true })
+      .then(function(res){
+        if (res.error){
+          list6.innerHTML = '<p style="color:var(--red); font-size:0.85rem;">Erro ao carregar: ' + res.error.message + '</p>';
+          return;
+        }
+        adicionaisCache = res.data || [];
+        renderAdicionaisList();
+      });
+  }
+
+  function renderAdicionaisList(){
+    var list6 = document.getElementById("adicionais6List");
+    var list10 = document.getElementById("adicionais10List");
+    var itens6 = adicionaisCache.filter(function(a){ return a.tamanho === "6"; });
+    var itens10 = adicionaisCache.filter(function(a){ return a.tamanho === "10"; });
+
+    function itemHTML(a){
+      return (
+        '<div class="kit-row ' + (a.ativo ? "" : "inativo") + '" data-id="' + a.id + '">' +
+          '<div class="kit-row-info">' +
+            '<h3>' + a.nome + '</h3>' +
+            '<span>R$ ' + Number(a.preco).toFixed(2).replace(".", ",") + ' · ' + (a.ativo ? "Ativo" : "Inativo") + '</span>' +
+          '</div>' +
+          '<div class="kit-row-actions">' +
+            '<button class="icon-btn" title="Editar" data-edit-adic="' + a.id + '">✎</button>' +
+            '<button class="icon-btn" title="' + (a.ativo ? "Desativar" : "Ativar") + '" data-toggle-adic="' + a.id + '">' + (a.ativo ? "👁" : "🚫") + '</button>' +
+            '<button class="icon-btn danger" title="Excluir" data-delete-adic="' + a.id + '">🗑</button>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+
+    list6.innerHTML = itens6.length ? itens6.map(itemHTML).join("") : '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum adicional cadastrado para kits de 6.</p>';
+    list10.innerHTML = itens10.length ? itens10.map(itemHTML).join("") : '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum adicional cadastrado para kits de 10.</p>';
+
+    document.querySelectorAll("[data-edit-adic]").forEach(function(btn){
+      btn.addEventListener("click", function(){ openAdicionalForm(btn.getAttribute("data-edit-adic")); });
+    });
+    document.querySelectorAll("[data-toggle-adic]").forEach(function(btn){
+      btn.addEventListener("click", function(){ toggleAtivoAdicional(btn.getAttribute("data-toggle-adic")); });
+    });
+    document.querySelectorAll("[data-delete-adic]").forEach(function(btn){
+      btn.addEventListener("click", function(){ deleteAdicional(btn.getAttribute("data-delete-adic")); });
+    });
+  }
+
+  function toggleAtivoAdicional(id){
+    var a = adicionaisCache.find(function(x){ return x.id === id; });
+    if (!a) return;
+    supabase.from("adicionais").update({ ativo: !a.ativo }).eq("id", id).then(function(res){
+      if (res.error){ showAdicionalMsg("Erro ao atualizar: " + res.error.message, true); return; }
+      showAdicionalMsg("Adicional atualizado.");
+      loadAdicionais();
+    });
+  }
+
+  function deleteAdicional(id){
+    var a = adicionaisCache.find(function(x){ return x.id === id; });
+    if (!a) return;
+    if (!confirm('Excluir o adicional "' + a.nome + '"? Essa ação não pode ser desfeita.')) return;
+    supabase.from("adicionais").delete().eq("id", id).then(function(res){
+      if (res.error){ showAdicionalMsg("Erro ao excluir: " + res.error.message, true); return; }
+      showAdicionalMsg("Adicional excluído.");
+      loadAdicionais();
+    });
+  }
+
+  function showAdicionalMsg(text, isError){
+    adicionalMsgAdmin.textContent = text;
+    adicionalMsgAdmin.style.color = isError ? "var(--red)" : "var(--cream-dim)";
+    if (text){ setTimeout(function(){ adicionalMsgAdmin.textContent = ""; }, 3000); }
+  }
+
+  function openAdicionalForm(id){
+    editingAdicionalId = id;
+    var a = id ? adicionaisCache.find(function(x){ return x.id === id; }) : null;
+
+    formCard.innerHTML =
+      '<h2>' + (a ? "Editar adicional" : "Novo adicional") + '</h2>' +
+      '<div class="field"><label>Nome do adicional</label><input type="text" id="fAdicNome" value="' + (a ? a.nome.replace(/"/g,"&quot;") : "") + '" placeholder="Ex: Bacon, 12 fatias"></div>' +
+      '<div class="form-row">' +
+        '<div class="field"><label>Preço (R$)</label><input type="number" step="0.01" id="fAdicPreco" value="' + (a ? a.preco : "") + '" placeholder="0,00"></div>' +
+        '<div class="field"><label>Para qual kit</label><select id="fAdicTamanho">' +
+          '<option value="6" ' + (a && a.tamanho === "6" ? "selected" : "") + '>Kits de 6</option>' +
+          '<option value="10" ' + (a && a.tamanho === "10" ? "selected" : "") + '>Kits de 10</option>' +
+        '</select></div>' +
+      '</div>' +
+      '<div class="toggle-ativo"><input type="checkbox" id="fAdicAtivo" ' + (!a || a.ativo ? "checked" : "") + '><label for="fAdicAtivo" style="margin:0;">Adicional ativo</label></div>' +
+
+      '<div class="form-actions">' +
+        '<button type="button" class="btn-cancel" id="btnCancelForm">Cancelar</button>' +
+        '<button type="button" class="btn-primary" id="btnSaveAdicionalForm">Salvar</button>' +
+      '</div>';
+
+    document.getElementById("btnCancelForm").addEventListener("click", closeForm);
+    document.getElementById("btnSaveAdicionalForm").addEventListener("click", saveAdicionalForm);
+    formOverlay.classList.add("open");
+  }
+
+  function saveAdicionalForm(){
+    var nome = document.getElementById("fAdicNome").value.trim();
+    var preco = parseFloat(document.getElementById("fAdicPreco").value);
+    var tamanho = document.getElementById("fAdicTamanho").value;
+    var ativo = document.getElementById("fAdicAtivo").checked;
+
+    if (!nome){ showAdicionalMsg("Informe o nome do adicional.", true); return; }
+    if (isNaN(preco) || preco < 0){ showAdicionalMsg("Informe um preço válido.", true); return; }
+
+    var payload = { nome: nome, preco: preco, tamanho: tamanho, ativo: ativo };
+
+    var query = editingAdicionalId
+      ? supabase.from("adicionais").update(payload).eq("id", editingAdicionalId)
+      : supabase.from("adicionais").insert(payload);
+
+    query.then(function(res){
+      if (res.error){ showAdicionalMsg("Erro ao salvar: " + res.error.message, true); return; }
+      closeForm();
+      showAdicionalMsg("Adicional salvo com sucesso!");
+      loadAdicionais();
     });
   }
 

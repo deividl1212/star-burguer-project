@@ -47,6 +47,7 @@
       <button class="admin-tab active" id="tabKits">Kits</button>
       <button class="admin-tab" id="tabCupons">Cupons</button>
       <button class="admin-tab" id="tabPromocoes">Promoção</button>
+      <button class="admin-tab" id="tabAdicionais">Adicionais</button>
     </div>
 
     <div id="kitsSection">
@@ -74,6 +75,22 @@
       </div>
       <p class="admin-msg" id="promocaoMsgAdmin"></p>
       <div id="promocoesList" class="kits-list"></div>
+    </div>
+
+    <div id="adicionaisSection" class="hidden">
+      <div class="admin-toolbar">
+        <h2>Adicionais (kits 6 e 10)</h2>
+        <button class="btn-primary btn-sm" id="btnNovoAdicional">+ Novo adicional</button>
+      </div>
+      <p class="admin-msg" id="adicionalMsgAdmin"></p>
+      <div class="admin-toolbar" style="margin-top:8px; margin-bottom:10px;">
+        <h3 style="font-size:0.95rem; color:var(--gold);">Kits de 6</h3>
+      </div>
+      <div id="adicionais6List" class="kits-list"></div>
+      <div class="admin-toolbar" style="margin-top:20px; margin-bottom:10px;">
+        <h3 style="font-size:0.95rem; color:var(--gold);">Kits de 10</h3>
+      </div>
+      <div id="adicionais10List" class="kits-list"></div>
     </div>
   </main>
 </div>
