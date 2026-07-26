@@ -657,3 +657,12 @@
   margin-top:6px;
   min-height:16px;
 }
+
+/* ---------- CEP ---------- */
+.cep-msg{
+  display:block;
+  font-size:0.75rem;
+  margin-top:6px;
+  min-height:16px;
+  color:var(--cream-dim);
+}

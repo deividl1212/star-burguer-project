@@ -223,6 +223,67 @@
 
   function findBairro(id){ return bairrosCache.find(function(b){ return b.id === id; }); }
 
+  function normalizarTexto(s){
+    return (s || "")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase().trim();
+  }
+
+  function buscarCep(cepRaw){
+    var cep = cepRaw.replace(/\D/g, "");
+    var msgEl = document.getElementById("cepMsg");
+    if (cep.length !== 8){
+      if (msgEl) msgEl.textContent = "";
+      return;
+    }
+    if (msgEl){ msgEl.style.color = "var(--cream-dim)"; msgEl.textContent = "Buscando..."; }
+
+    fetch("https://viacep.com.br/ws/" + cep + "/json/")
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if (!msgEl) return;
+        if (data.erro){
+          msgEl.style.color = "var(--red)";
+          msgEl.textContent = "CEP não encontrado. Preencha manualmente.";
+          return;
+        }
+
+        var inputEndereco = document.getElementById("inputEndereco");
+        if (inputEndereco && data.logradouro){
+          inputEndereco.value = data.logradouro;
+        }
+
+        var bairroApi = normalizarTexto(data.bairro);
+        var bairroEncontrado = bairrosCache.find(function(b){
+          return normalizarTexto(b.nome) === bairroApi;
+        });
+
+        if (bairroEncontrado){
+          selectedBairroId = bairroEncontrado.id;
+          var selectEl = document.getElementById("inputBairro");
+          if (selectEl) selectEl.value = bairroEncontrado.id;
+          var taxaMsgEl = document.getElementById("bairroTaxaMsg");
+          if (taxaMsgEl){
+            taxaMsgEl.textContent = Number(bairroEncontrado.taxa) === 0
+              ? "Entrega grátis para este bairro."
+              : "Taxa de entrega: " + brl(Number(bairroEncontrado.taxa));
+          }
+          msgEl.style.color = "var(--gold)";
+          msgEl.textContent = "Endereço e bairro preenchidos automaticamente.";
+          renderCheckoutFooter();
+        } else {
+          msgEl.style.color = "var(--cream-dim)";
+          msgEl.textContent = "Endereço preenchido. Selecione seu bairro na lista abaixo.";
+        }
+      })
+      .catch(function(){
+        if (msgEl){
+          msgEl.style.color = "var(--red)";
+          msgEl.textContent = "Não foi possível buscar o CEP agora. Preencha manualmente.";
+        }
+      });
+  }
+
   function taxaEntregaAtual(){
     if (deliveryType !== "entrega") return 0;
     var b = findBairro(selectedBairroId);
@@ -474,6 +535,26 @@
 
       '<div class="field" id="fieldNome"><label>Nome</label><input type="text" id="inputNome" placeholder="Seu nome completo"><span class="error-text">Informe seu nome.</span></div>' +
 
+      '<div class="field" id="fieldCep" style="display:' + (deliveryType==="entrega"?"block":"none") + '">' +
+        '<label>CEP (opcional)</label><input type="text" id="inputCep" placeholder="00000-000" maxlength="9">' +
+        '<span class="cep-msg" id="cepMsg"></span>' +
+      '</div>' +
+
+      '<div class="field" id="fieldCep" style="display:' + (deliveryType==="entrega"?"block":"none") + '">' +
+        '<label>CEP (opcional)</label><input type="text" id="inputCep" placeholder="00000-000" maxlength="9">' +
+        '<span class="cep-msg" id="cepMsg"></span>' +
+      '</div>' +
+
+      '<div class="field" id="fieldCep" style="display:' + (deliveryType==="entrega"?"block":"none") + '">' +
+        '<label>CEP (opcional)</label><input type="text" id="inputCep" placeholder="00000-000" maxlength="9">' +
+        '<span class="cep-msg" id="cepMsg"></span>' +
+      '</div>' +
+
+      '<div class="field" id="fieldCep" style="display:' + (deliveryType==="entrega"?"block":"none") + '">' +
+        '<label>CEP (opcional)</label><input type="text" id="inputCep" placeholder="00000-000" maxlength="9">' +
+        '<span class="cep-msg" id="cepMsg"></span>' +
+      '</div>' +
+
       '<div class="field" id="fieldEndereco" style="display:' + (deliveryType==="entrega"?"block":"none") + '">' +
         '<label>Endereço</label><input type="text" id="inputEndereco" placeholder="Rua, número"><span class="error-text">Informe o endereço de entrega.</span>' +
       '</div>' +
@@ -527,6 +608,15 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     });
 
     renderCupomField();
+
+    var inputCep = document.getElementById("inputCep");
+    if (inputCep){
+      inputCep.addEventListener("input", function(){
+        var digits = this.value.replace(/\D/g, "").slice(0, 8);
+        this.value = digits.length > 5 ? digits.slice(0,5) + "-" + digits.slice(5) : digits;
+        if (digits.length === 8){ buscarCep(digits); }
+      });
+    }
 
     var inputBairro = document.getElementById("inputBairro");
     if (inputBairro){
