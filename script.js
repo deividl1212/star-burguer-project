@@ -743,7 +743,7 @@
       '<div class="field" id="fieldTelefone"><label>Telefone</label><input type="tel" id="inputTelefone" placeholder="(00) 00000-0000"><span class="error-text">Informe um telefone válido.</span></div>' +
 
      '<div class="form-row">' +
-        '<div class="field"><label>Data desejada</label><input type="date" id="inputData"><span class="error-text">Escolha uma data.</span></div>' +
+        '<div class="field"><label>Data desejada</label><input type="date" id="inputData" min="' + new Date().toISOString().split("T")[0] + '"><span class="error-text" id="dataErrorText">Escolha uma data.</span></div>' +
         '<div class="field"><label>Horário desejado</label><input type="time" id="inputHora"><span class="error-text">Escolha um horário.</span></div>' +
       '</div>' +
 
@@ -1014,8 +1014,22 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     }
 
    var dataField = document.getElementById("inputData");
-    if (!data){ dataField.style.borderColor = "var(--red)"; valid = false; }
-    else { dataField.style.borderColor = ""; }
+    var dataErrorText = document.getElementById("dataErrorText");
+    var hojeStr = new Date().toISOString().split("T")[0];
+    if (!data){
+      dataField.style.borderColor = "var(--red)";
+      dataErrorText.textContent = "Escolha uma data.";
+      dataErrorText.style.display = "block";
+      valid = false;
+    } else if (data < hojeStr){
+      dataField.style.borderColor = "var(--red)";
+      dataErrorText.textContent = "Essa data já passou. Escolha uma data válida.";
+      dataErrorText.style.display = "block";
+      valid = false;
+    } else {
+      dataField.style.borderColor = "";
+      dataErrorText.style.display = "none";
+    }
 
     var horaField = document.getElementById("inputHora");
     if (!hora){ horaField.style.borderColor = "var(--red)"; valid = false; }
