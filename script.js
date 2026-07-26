@@ -319,6 +319,77 @@
       });
   }
 
+  var ruaSearchTimeout = null;
+
+  function buscarRuaSugestoes(termo){
+    var container = document.getElementById("ruaSugestoes");
+    if (!container) return;
+
+    if (termo.length < 3){
+      container.innerHTML = "";
+      container.classList.remove("show");
+      return;
+    }
+
+    fetch("https://viacep.com.br/ws/PR/Cascavel/" + encodeURIComponent(termo) + "/json/")
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if (!Array.isArray(data) || data.length === 0){
+          container.innerHTML = "";
+          container.classList.remove("show");
+          return;
+        }
+        container.innerHTML = data.slice(0, 8).map(function(item, i){
+          return '<div class="rua-sugestao-item" data-idx="' + i + '">' +
+            '<strong>' + item.logradouro + '</strong>' +
+            '<span>' + item.bairro + '</span>' +
+          '</div>';
+        }).join("");
+        container.classList.add("show");
+
+        container.querySelectorAll("[data-idx]").forEach(function(el){
+          el.addEventListener("click", function(){
+            var item = data[parseInt(el.getAttribute("data-idx"), 10)];
+            selecionarRuaSugerida(item);
+          });
+        });
+      })
+      .catch(function(){
+        container.innerHTML = "";
+        container.classList.remove("show");
+      });
+  }
+
+  function selecionarRuaSugerida(item){
+    var inputEndereco = document.getElementById("inputEndereco");
+    if (inputEndereco) inputEndereco.value = item.logradouro;
+
+    var container = document.getElementById("ruaSugestoes");
+    if (container){ container.innerHTML = ""; container.classList.remove("show"); }
+
+    var bairroApi = normalizarTexto(item.bairro);
+    var bairroEncontrado = bairrosCache.find(function(b){
+      return normalizarTexto(b.nome) === bairroApi;
+    });
+
+    var cepMsgEl = document.getElementById("cepMsg");
+    if (bairroEncontrado){
+      selectedBairroId = bairroEncontrado.id;
+      var selectEl = document.getElementById("inputBairro");
+      if (selectEl) selectEl.value = bairroEncontrado.id;
+      var taxaMsgEl = document.getElementById("bairroTaxaMsg");
+      if (taxaMsgEl){
+        taxaMsgEl.textContent = Number(bairroEncontrado.taxa) === 0
+          ? "Entrega grátis para este bairro."
+          : "Taxa de entrega: " + brl(Number(bairroEncontrado.taxa));
+      }
+      renderCheckoutFooter();
+    } else if (cepMsgEl){
+      cepMsgEl.style.color = "var(--cream-dim)";
+      cepMsgEl.textContent = "Selecione seu bairro na lista abaixo.";
+    }
+  }
+
   function taxaEntregaAtual(){
     if (deliveryType !== "entrega") return 0;
     var b = findBairro(selectedBairroId);
@@ -647,8 +718,10 @@
       '</div>' +
 
 
-      '<div class="field" id="fieldEndereco" style="display:' + (deliveryType==="entrega"?"block":"none") + '">' +
-        '<label>Rua</label><input type="text" id="inputEndereco" placeholder="Nome da rua"><span class="error-text">Informe a rua de entrega.</span>' +
+      '<div class="field" id="fieldEndereco" style="display:' + (deliveryType==="entrega"?"block":"none") + '; position:relative;">' +
+        '<label>Rua</label><input type="text" id="inputEndereco" placeholder="Digite ao menos 3 letras da rua" autocomplete="off">' +
+        '<div class="rua-sugestoes" id="ruaSugestoes"></div>' +
+        '<span class="error-text">Informe a rua de entrega.</span>' +
       '</div>' +
 
       '<div class="field" id="fieldNumero" style="display:' + (deliveryType==="entrega"?"block":"none") + '">' +
@@ -716,6 +789,23 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     });
 
     renderCupomField();
+
+    var inputEnderecoEl = document.getElementById("inputEndereco");
+    if (inputEnderecoEl){
+      inputEnderecoEl.addEventListener("input", function(){
+        var termo = this.value.trim();
+        clearTimeout(ruaSearchTimeout);
+        ruaSearchTimeout = setTimeout(function(){
+          buscarRuaSugestoes(termo);
+        }, 400);
+      });
+      inputEnderecoEl.addEventListener("blur", function(){
+        setTimeout(function(){
+          var container = document.getElementById("ruaSugestoes");
+          if (container) container.classList.remove("show");
+        }, 200);
+      });
+    }
 
     var inputCep = document.getElementById("inputCep");
     if (inputCep){

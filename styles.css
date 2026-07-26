@@ -744,3 +744,29 @@
   font-weight:700;
   line-height:1;
 }
+
+/* ---------- Sugestões de rua (autocomplete) ---------- */
+.rua-sugestoes{
+  display:none;
+  position:absolute;
+  left:0; right:0; top:100%;
+  z-index:20;
+  background:var(--bg-elev-2);
+  border:1px solid var(--gold);
+  border-radius:12px;
+  margin-top:4px;
+  max-height:220px;
+  overflow-y:auto;
+  box-shadow:0 10px 24px rgba(0,0,0,0.4);
+}
+.rua-sugestoes.show{ display:block; }
+.rua-sugestao-item{
+  padding:10px 14px;
+  cursor:pointer;
+  border-bottom:1px solid var(--line);
+  display:flex; flex-direction:column; gap:2px;
+}
+.rua-sugestao-item:last-child{ border-bottom:none; }
+.rua-sugestao-item:hover{ background:rgba(245,179,25,0.1); }
+.rua-sugestao-item strong{ font-size:0.85rem; color:var(--cream); }
+.rua-sugestao-item span{ font-size:0.72rem; color:var(--cream-dim); }
