@@ -542,7 +542,11 @@
 
 
       '<div class="field" id="fieldEndereco" style="display:' + (deliveryType==="entrega"?"block":"none") + '">' +
-        '<label>Endereço</label><input type="text" id="inputEndereco" placeholder="Rua, número"><span class="error-text">Informe o endereço de entrega.</span>' +
+        '<label>Rua</label><input type="text" id="inputEndereco" placeholder="Nome da rua"><span class="error-text">Informe a rua de entrega.</span>' +
+      '</div>' +
+
+      '<div class="field" id="fieldNumero" style="display:' + (deliveryType==="entrega"?"block":"none") + '">' +
+        '<label>Número</label><input type="text" id="inputNumero" placeholder="Ex: 123"><span class="error-text">Informe o número.</span>' +
       '</div>' +
 
       '<div class="field" id="fieldBairro" style="display:' + (deliveryType==="entrega"?"block":"none") + '">' +
@@ -701,8 +705,7 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
   function atualizarTipoEntregaUI(){
     document.getElementById("toggleEntrega").classList.toggle("active", deliveryType === "entrega");
     document.getElementById("toggleRetirada").classList.toggle("active", deliveryType === "retirada");
-    document.getElementById("fieldEndereco").style.display = deliveryType === "entrega" ? "block" : "none";
-    document.getElementById("fieldBairro").style.display = deliveryType === "entrega" ? "block" : "none";
+    
     renderCheckoutFooter();
   }
 
@@ -711,6 +714,9 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     if (!footer) return;
     var desconto = calcularDesconto();
     var taxa = taxaEntregaAtual();
+    document.getElementById("fieldEndereco").style.display = deliveryType === "entrega" ? "block" : "none";
+    document.getElementById("fieldNumero").style.display = deliveryType === "entrega" ? "block" : "none";
+    document.getElementById("fieldBairro").style.display = deliveryType === "entrega" ? "block" : "none";
     var total = cartTotal() - desconto + taxa;
 
     footer.innerHTML =
@@ -737,6 +743,7 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
   function trySendOrder(){
     var nome = document.getElementById("inputNome").value.trim();
     var endereco = deliveryType === "entrega" ? document.getElementById("inputEndereco").value.trim() : "";
+    var numero = deliveryType === "entrega" ? document.getElementById("inputNumero").value.trim() : "";
     var telefone = document.getElementById("inputTelefone").value.trim();
     var data = document.getElementById("inputData").value;
     var hora = document.getElementById("inputHora").value;
@@ -751,6 +758,7 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     setInvalid("fieldNome", nome.length === 0);
     if (deliveryType === "entrega"){
       setInvalid("fieldEndereco", endereco.length === 0);
+      setInvalid("fieldNumero", numero.length === 0);
       setInvalid("fieldBairro", !selectedBairroId);
     }
     setInvalid("fieldTelefone", telefone.length < 8);
@@ -766,7 +774,7 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
 
     if (!valid){ showToast("Confira os campos destacados"); return; }
 
-    var msg = buildWhatsAppMessage({ nome: nome, endereco: endereco, telefone: telefone, data: data, hora: hora, obs: obs });
+   var msg = buildWhatsAppMessage({ nome: nome, endereco: endereco, numero: numero, telefone: telefone, data: data, hora: hora, obs: obs });
     var url = "https://wa.me/" + WHATSAPP_NUMBER + "?text=" + encodeURIComponent(msg);
     window.open(url, "_blank");
 
@@ -817,10 +825,11 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     lines.push("*Tipo:* " + (deliveryType === "entrega" ? "Entrega" : "Retirada"));
     lines.push("*Nome:* " + data.nome);
     if (deliveryType === "entrega"){
-      lines.push("*Endereço:* " + data.endereco);
+      lines.push("*Endereço:* " + data.endereco + ", " + data.numero);
       var bairroSel = findBairro(selectedBairroId);
       lines.push("*Bairro:* " + (bairroSel ? bairroSel.nome : ""));
     }
+    
     lines.push("*Telefone:* " + data.telefone);
     lines.push("*Data desejada:* " + formatDateBR(data.data) + " às " + data.hora);
     lines.push("*Pagamento:* " + paymentMethod);
