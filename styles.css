@@ -770,3 +770,20 @@
 .rua-sugestao-item:hover{ background:rgba(245,179,25,0.1); }
 .rua-sugestao-item strong{ font-size:0.85rem; color:var(--cream); }
 .rua-sugestao-item span{ font-size:0.72rem; color:var(--cream-dim); }
+
+/* ---------- Cursor de clique consistente em botões/opções ---------- */
+.toggle-btn,
+.pay-opt,
+.btn-primary,
+.btn-secondary,
+.btn-cta-large,
+.btn-ghost,
+.kit-cta,
+.option,
+.adicional-item,
+.btn-cupom-aplicar,
+.btn-cupom-remove{
+  cursor:pointer;
+  user-select:none;
+  -webkit-user-select:none;
+}
