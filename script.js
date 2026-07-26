@@ -545,16 +545,6 @@
         '<span class="cep-msg" id="cepMsg"></span>' +
       '</div>' +
 
-      '<div class="field" id="fieldCep" style="display:' + (deliveryType==="entrega"?"block":"none") + '">' +
-        '<label>CEP (opcional)</label><input type="text" id="inputCep" placeholder="00000-000" maxlength="9">' +
-        '<span class="cep-msg" id="cepMsg"></span>' +
-      '</div>' +
-
-      '<div class="field" id="fieldCep" style="display:' + (deliveryType==="entrega"?"block":"none") + '">' +
-        '<label>CEP (opcional)</label><input type="text" id="inputCep" placeholder="00000-000" maxlength="9">' +
-        '<span class="cep-msg" id="cepMsg"></span>' +
-      '</div>' +
-
       '<div class="field" id="fieldEndereco" style="display:' + (deliveryType==="entrega"?"block":"none") + '">' +
         '<label>Endereço</label><input type="text" id="inputEndereco" placeholder="Rua, número"><span class="error-text">Informe o endereço de entrega.</span>' +
       '</div>' +
