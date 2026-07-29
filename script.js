@@ -140,8 +140,16 @@
   var selectedBairroId = null;
 
   /* ============ HELPERS ============ */
-  function brl(v){
+ function brl(v){
     return "R$ " + v.toFixed(2).replace(".", ",");
+  }
+
+  function dataLocalHoje(){
+    var d = new Date();
+    var ano = d.getFullYear();
+    var mes = String(d.getMonth() + 1).padStart(2, "0");
+    var dia = String(d.getDate()).padStart(2, "0");
+    return ano + "-" + mes + "-" + dia;
   }
   function findKit(id){ return KITS.find(function(k){ return k.id === id; }); }
 
@@ -743,7 +751,7 @@
       '<div class="field" id="fieldTelefone"><label>Telefone</label><input type="tel" id="inputTelefone" placeholder="(00) 00000-0000"><span class="error-text">Informe um telefone válido.</span></div>' +
 
      '<div class="form-row">' +
-        '<div class="field"><label>Data desejada</label><input type="date" id="inputData" min="' + new Date().toISOString().split("T")[0] + '"><span class="error-text" id="dataErrorText">Escolha uma data.</span></div>' +
+       '<div class="field"><label>Data desejada</label><input type="date" id="inputData" min="' + dataLocalHoje() + '"><span class="error-text" id="dataErrorText">Escolha uma data.</span></div>' +
         '<div class="field"><label>Horário desejado</label><input type="time" id="inputHora"><span class="error-text">Escolha um horário.</span></div>' +
       '</div>' +
 
@@ -1015,7 +1023,7 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
 
    var dataField = document.getElementById("inputData");
     var dataErrorText = document.getElementById("dataErrorText");
-    var hojeStr = new Date().toISOString().split("T")[0];
+    var hojeStr = dataLocalHoje();
     if (!data){
       dataField.style.borderColor = "var(--red)";
       dataErrorText.textContent = "Escolha uma data.";
