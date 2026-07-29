@@ -144,7 +144,7 @@
     return "R$ " + v.toFixed(2).replace(".", ",");
   }
 
-  ffunction dataLocalHoje(){
+  function dataLocalHoje(){
     var d = new Date();
     var ano = d.getFullYear();
     var mes = String(d.getMonth() + 1).padStart(2, "0");
