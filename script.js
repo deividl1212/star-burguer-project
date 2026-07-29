@@ -144,12 +144,38 @@
     return "R$ " + v.toFixed(2).replace(".", ",");
   }
 
-  function dataLocalHoje(){
+  ffunction dataLocalHoje(){
     var d = new Date();
     var ano = d.getFullYear();
     var mes = String(d.getMonth() + 1).padStart(2, "0");
     var dia = String(d.getDate()).padStart(2, "0");
     return ano + "-" + mes + "-" + dia;
+  }
+
+  function checkHorarioProximo(){
+    var avisoEl = document.getElementById("horarioAviso");
+    if (!avisoEl) return;
+    var dataVal = document.getElementById("inputData").value;
+    var horaVal = document.getElementById("inputHora").value;
+
+    if (!dataVal || !horaVal || dataVal !== dataLocalHoje()){
+      avisoEl.textContent = "";
+      return;
+    }
+
+    var partesHora = horaVal.split(":");
+    var alvo = new Date();
+    alvo.setHours(parseInt(partesHora[0], 10), parseInt(partesHora[1], 10), 0, 0);
+
+    var diffMinutos = (alvo.getTime() - Date.now()) / 60000;
+
+    if (diffMinutos >= 0 && diffMinutos < 45){
+      avisoEl.textContent = "⚠️ Esse horário está muito próximo. A entrega pode levar até 45 minutos.";
+    } else if (diffMinutos < 0){
+      avisoEl.textContent = "⚠️ Esse horário já passou. Escolha um horário mais adiante.";
+    } else {
+      avisoEl.textContent = "";
+    }
   }
   function findKit(id){ return KITS.find(function(k){ return k.id === id; }); }
 
@@ -752,7 +778,7 @@
 
      '<div class="form-row">' +
        '<div class="field"><label>Data desejada</label><input type="date" id="inputData" min="' + dataLocalHoje() + '"><span class="error-text" id="dataErrorText">Escolha uma data.</span></div>' +
-        '<div class="field"><label>Horário desejado</label><input type="time" id="inputHora"><span class="error-text">Escolha um horário.</span></div>' +
+       '<div class="field"><label>Horário desejado</label><input type="time" id="inputHora"><span class="error-text">Escolha um horário.</span><span class="horario-aviso" id="horarioAviso"></span></div>' +
       '</div>' +
 
       '<div class="field" id="cupomFieldWrap"></div>' +
@@ -814,6 +840,11 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
         }, 200);
       });
     }
+
+    var inputDataEl = document.getElementById("inputData");
+    if (inputDataEl){ inputDataEl.addEventListener("change", checkHorarioProximo); }
+    var inputHoraEl = document.getElementById("inputHora");
+    if (inputHoraEl){ inputHoraEl.addEventListener("change", checkHorarioProximo); }
 
     var inputCep = document.getElementById("inputCep");
     if (inputCep){
