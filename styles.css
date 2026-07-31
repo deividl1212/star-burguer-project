@@ -809,7 +809,7 @@
   align-items:center;
   gap:16px;
   width:max-content;
-  animation:marquee-scroll 18s linear infinite;
+  animation:marquee-scroll 12s linear infinite;
 }
 .welcome-marquee-track img{
   height:64px;
