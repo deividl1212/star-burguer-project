@@ -1132,9 +1132,9 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
       lines.push("Subtotal: " + brl(cartTotal()));
       if (appliedCoupon){ lines.push("Cupom aplicado (" + appliedCoupon.codigo + "): -" + brl(descontoMsg)); }
       if (deliveryType === "entrega"){ lines.push("Taxa de entrega: " + (taxaMsg === 0 ? "Grátis" : brl(taxaMsg))); }
-      lines.push("*Total: " + brl(cartTotal() - descontoMsg + taxaMsg) + "*");
+      lines.push("💰 *Total: " + brl(cartTotal() - descontoMsg + taxaMsg) + "*");
     } else {
-      lines.push("*Total: " + brl(cartTotal()) + "*");
+      lines.push("💰 *Total: " + brl(cartTotal()) + "*");s
     }
     lines.push("");
 
