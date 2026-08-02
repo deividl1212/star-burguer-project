@@ -1119,7 +1119,10 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
       }).filter(Boolean);
       lines.push("• " + item.qty + "x " + kit.nome + " (" + opt.label + ") — " + brl(precoUnitItem(item) * item.qty));
       if (nomesAdicionais.length){
-        lines.push("   + " + nomesAdicionais.join(", "));
+        lines.push("⚠️ *Adicionais:*");
+        nomesAdicionais.forEach(function(nome){
+          lines.push("✅ " + nome);
+        });
       }
     });
    lines.push("");
@@ -1139,25 +1142,29 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     lines.push("*Tipo:* " + (deliveryType === "entrega" ? "Entrega" : "Retirada"));
     lines.push("*Nome:* " + data.nome);
     if (deliveryType === "entrega"){
-      lines.push("*Endereço:* " + data.endereco + ", " + data.numero);
+      lines.push("");
+      lines.push("📍 *ENDEREÇO*");
+      lines.push(data.endereco + ", " + data.numero);
       var bairroSel = findBairro(selectedBairroId);
       lines.push("*Bairro:* " + (bairroSel ? bairroSel.nome : ""));
     }
 
     lines.push("*Telefone:* " + data.telefone);
     lines.push("*Data desejada:* " + formatDateBR(data.data) + " às " + data.hora);
+    lines.push("");
+    lines.push("💳 *FORMA DE PAGAMENTO*");
     if (paymentMethod === "Dinheiro"){
       if (needsChange === true && trocoPara){
-        lines.push("*Pagamento:* Dinheiro (troco para " + brl(parseFloat(trocoPara)) + ")");
+        lines.push("Dinheiro (troco para " + brl(parseFloat(trocoPara)) + ")");
       } else if (needsChange === false){
-        lines.push("*Pagamento:* Dinheiro (sem troco)");
+        lines.push("Dinheiro (sem troco)");
       } else {
-        lines.push("*Pagamento:* " + paymentMethod);
+        lines.push(paymentMethod);
       }
     } else {
-      lines.push("*Pagamento:* " + paymentMethod);
+      lines.push(paymentMethod);
     }
-    if (data.obs){ lines.push("*Observações:* " + data.obs); }
+    if (data.obs){ lines.push(""); lines.push("*Observações:* " + data.obs); }
     return lines.join("\n");
   }
 
