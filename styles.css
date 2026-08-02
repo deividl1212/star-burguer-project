@@ -836,3 +836,8 @@
   margin-bottom:0;
   letter-spacing:0.5px;
 }
+/* ---------- Botão "Finalize seu pedido agora" em laranja ---------- */
+.btn-checkout-orange{
+  background:linear-gradient(135deg, var(--ember), var(--gold)) !important;
+  box-shadow:0 8px 20px rgba(255,122,61,0.4) !important;
+}

@@ -690,7 +690,7 @@
       '</div>' +
       '<div class="sheet-footer">' +
         '<div class="cart-summary-row"><span>Total</span><span class="num">' + brl(cartTotal()) + '</span></div>' +
-        '<button class="btn-primary" id="goCheckout">Faça seu pedido agora</button>' +
+        '<button class="btn-primary btn-checkout-orange" id="goCheckout">Finalize seu pedido agora</button>' +
       '</div>';
 
     document.getElementById("closeCart").addEventListener("click", closeCart);
@@ -936,9 +936,7 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
       var elegiveis = appliedCoupon.kits_aplicaveis || [];
       baseTotal = cart.reduce(function(sum, item){
         if (elegiveis.indexOf(item.kitId) !== -1){
-          var kit = findKit(item.kitId);
-          var opt = kit.opcoes[item.optIndex];
-          return sum + opt.preco * item.qty;
+          return sum + precoUnitItem(item) * item.qty;
         }
         return sum;
       }, 0);
