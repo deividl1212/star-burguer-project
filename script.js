@@ -7,7 +7,9 @@
   var CFG = window.STAR_BURGUER_CONFIG || {};
     var WHATSAPP_NUMBER = CFG.WHATSAPP_NUMBER || "5599999999999";
   var INSTAGRAM_URL = CFG.INSTAGRAM_URL || "https://instagram.com/starburguer";
-  var PIX_KEY = CFG.PIX_KEY || "57.123.860/0001-30";
+    var PIX_KEY = CFG.PIX_KEY || "57.123.860/0001-30";
+  var PIX_TITULAR = CFG.PIX_TITULAR || "Ernandes Gomes de Souza";
+  var PIX_BANCO = CFG.PIX_BANCO || "Banco Inter";
   var SUPABASE_URL = CFG.SUPABASE_URL || "SUA_URL_DO_SUPABASE";
   var SUPABASE_ANON_KEY = CFG.SUPABASE_ANON_KEY || "SUA_CHAVE_ANON_DO_SUPABASE";
 
@@ -790,12 +792,16 @@
           '<div class="pay-opt ' + (paymentMethod==="Cartão"?"active":"") + '" data-pay="Cartão">Cartão</div>' +
         '</div>' +
         '<span class="error-text">Escolha a forma de pagamento.</span>' +
-        '<div class="pix-key-box" id="pixKeyBox" style="display:' + (paymentMethod==="Pix"?"flex":"none") + ';">' +
+                '<div class="pix-key-box" id="pixKeyBox" style="display:' + (paymentMethod==="Pix"?"flex":"none") + ';">' +
           '<div class="pix-key-info">' +
             '<span class="pix-key-label">Chave Pix (CNPJ)</span>' +
             '<span class="pix-key-value" id="pixKeyValue">' + PIX_KEY + '</span>' +
           '</div>' +
-          '<button type="button" class="btn-pix-copy" id="btnCopiarPix">Copiar</button>' +
+          '<div class="pix-key-extra">' +
+            '<div class="pix-key-extra-row"><span>Titular</span><strong>' + PIX_TITULAR + '</strong></div>' +
+            '<div class="pix-key-extra-row"><span>Banco</span><strong>' + PIX_BANCO + '</strong></div>' +
+          '</div>' +
+          '<button type="button" class="btn-pix-copy" id="btnCopiarPix">Copiar chave</button>' +
         '</div>' +
       '</div>' +
 

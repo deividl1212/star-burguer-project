@@ -203,6 +203,21 @@ a{color:var(--gold); text-decoration:none;}
   border-radius:8px;
   padding:8px 10px;
 }
+.pix-key-extra{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  padding-top:4px;
+  border-top:1px dashed var(--line);
+}
+.pix-key-extra-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-size:0.82rem;
+}
+.pix-key-extra-row span{ color:var(--cream-dim); }
+.pix-key-extra-row strong{ color:var(--cream); font-weight:600; }
 .btn-pix-copy{
   width:100%;
   background:linear-gradient(135deg, var(--gold), var(--ember));
@@ -217,3 +232,4 @@ a{color:var(--gold); text-decoration:none;}
   transition:transform 0.12s ease;
 }
 .btn-pix-copy:active{ transform:scale(0.97); opacity:0.9; }
+
