@@ -5,8 +5,9 @@
      Os valores reais (WhatsApp, Instagram, Supabase) ficam em config.js,
      na raiz do projeto — é o único lugar que precisa ser editado. */
   var CFG = window.STAR_BURGUER_CONFIG || {};
-  var WHATSAPP_NUMBER = CFG.WHATSAPP_NUMBER || "5599999999999";
+    var WHATSAPP_NUMBER = CFG.WHATSAPP_NUMBER || "5599999999999";
   var INSTAGRAM_URL = CFG.INSTAGRAM_URL || "https://instagram.com/starburguer";
+  var PIX_KEY = CFG.PIX_KEY || "57.123.860/0001-30";
   var SUPABASE_URL = CFG.SUPABASE_URL || "SUA_URL_DO_SUPABASE";
   var SUPABASE_ANON_KEY = CFG.SUPABASE_ANON_KEY || "SUA_CHAVE_ANON_DO_SUPABASE";
 
@@ -782,13 +783,20 @@
       '</div>' +
 
       '<div class="field" id="cupomFieldWrap"></div>' +
-      '<div class="field" id="fieldPagamento"><label>Forma de pagamento</label>' +
+            '<div class="field" id="fieldPagamento"><label>Forma de pagamento</label>' +
         '<div class="pay-grid">' +
           '<div class="pay-opt ' + (paymentMethod==="Pix"?"active":"") + '" data-pay="Pix">Pix</div>' +
           '<div class="pay-opt ' + (paymentMethod==="Dinheiro"?"active":"") + '" data-pay="Dinheiro">Dinheiro</div>' +
           '<div class="pay-opt ' + (paymentMethod==="Cartão"?"active":"") + '" data-pay="Cartão">Cartão</div>' +
         '</div>' +
         '<span class="error-text">Escolha a forma de pagamento.</span>' +
+        '<div class="pix-key-box" id="pixKeyBox" style="display:' + (paymentMethod==="Pix"?"flex":"none") + ';">' +
+          '<div class="pix-key-info">' +
+            '<span class="pix-key-label">Chave Pix (CNPJ)</span>' +
+            '<span class="pix-key-value" id="pixKeyValue">' + PIX_KEY + '</span>' +
+          '</div>' +
+          '<button type="button" class="btn-pix-copy" id="btnCopiarPix">Copiar</button>' +
+        '</div>' +
       '</div>' +
 
       '<div class="field" id="fieldTroco" style="display:' + (paymentMethod==="Dinheiro"?"block":"none") + '">' +
@@ -815,12 +823,24 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
       deliveryType = "retirada";
       atualizarTipoEntregaUI();
     });
-    sheet.querySelectorAll("[data-pay]").forEach(function(el){
+        sheet.querySelectorAll("[data-pay]").forEach(function(el){
       el.addEventListener("click", function(){
         paymentMethod = el.getAttribute("data-pay");
         atualizarPagamentoUI();
       });
     });
+
+    var btnCopiarPix = document.getElementById("btnCopiarPix");
+    if (btnCopiarPix){
+      btnCopiarPix.addEventListener("click", function(){
+        navigator.clipboard.writeText(PIX_KEY).then(function(){
+          btnCopiarPix.textContent = "Copiado!";
+          setTimeout(function(){ btnCopiarPix.textContent = "Copiar"; }, 2000);
+        }).catch(function(){
+          showToast("Não foi possível copiar. Copie manualmente.");
+        });
+      });
+    }
 
     renderCupomField();
 
@@ -979,7 +999,7 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     document.getElementById("sendOrderBtn").addEventListener("click", trySendOrder);
   }
 
-  function atualizarPagamentoUI(){
+    function atualizarPagamentoUI(){
     document.getElementById("checkoutSheet").querySelectorAll("[data-pay]").forEach(function(el){
       el.classList.toggle("active", el.getAttribute("data-pay") === paymentMethod);
     });
@@ -988,6 +1008,11 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
       trocoPara = "";
     }
     renderTrocoField();
+
+    var pixBox = document.getElementById("pixKeyBox");
+    if (pixBox){
+      pixBox.style.display = paymentMethod === "Pix" ? "flex" : "none";
+    }
   }
 
   function renderTrocoField(){
@@ -1134,7 +1159,7 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
       if (deliveryType === "entrega"){ lines.push("Taxa de entrega: " + (taxaMsg === 0 ? "Grátis" : brl(taxaMsg))); }
       lines.push("💰 *Total: " + brl(cartTotal() - descontoMsg + taxaMsg) + "*");
     } else {
-      lines.push("💰 *Total: " + brl(cartTotal()) + "*");s
+      lines.push("💰 *Total: " + brl(cartTotal()) + "*");
     }
     lines.push("");
 
