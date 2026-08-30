@@ -9,7 +9,8 @@
   var INSTAGRAM_URL = CFG.INSTAGRAM_URL || "https://instagram.com/starburguer";
     var PIX_KEY = CFG.PIX_KEY || "57.123.860/0001-30";
   var PIX_TITULAR = CFG.PIX_TITULAR || "Ernandes Gomes de Souza";
-  var PIX_BANCO = CFG.PIX_BANCO || "Banco Inter";
+    var PIX_BANCO = CFG.PIX_BANCO || "Banco Inter";
+  var ENDERECO_LOJA = "Rua Santa Clara, 424, Pioneiros Catarinenses, Cascavel-PR";
   var SUPABASE_URL = CFG.SUPABASE_URL || "SUA_URL_DO_SUPABASE";
   var SUPABASE_ANON_KEY = CFG.SUPABASE_ANON_KEY || "SUA_CHAVE_ANON_DO_SUPABASE";
 
@@ -740,11 +741,12 @@
       '<h2>Finalizar pedido</h2>' +
       '<p class="desc">Preencha seus dados. Você será direcionado ao WhatsApp com o pedido já pronto.</p>' +
 
-      '<div class="field"><label>Entrega ou retirada</label>' +
+            '<div class="field"><label>Entrega ou retirada</label>' +
         '<div class="toggle-row">' +
           '<button type="button" class="toggle-btn ' + (deliveryType==="entrega"?"active":"") + '" id="toggleEntrega">Entrega</button>' +
           '<button type="button" class="toggle-btn ' + (deliveryType==="retirada"?"active":"") + '" id="toggleRetirada">Retirada</button>' +
         '</div>' +
+        (deliveryType==="retirada" ? '<span class="retirada-aviso">📍 O endereço para retirada será mostrado após você finalizar o pedido.</span>' : '') +
       '</div>' +
 
       '<div class="field" id="fieldNome"><label>Nome</label><input type="text" id="inputNome" placeholder="Seu nome completo"><span class="error-text">Informe seu nome.</span></div>' +
@@ -973,10 +975,20 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     return Math.min(appliedCoupon.valor, baseTotal);
   }
 
-  function atualizarTipoEntregaUI(){
+    function atualizarTipoEntregaUI(){
     document.getElementById("toggleEntrega").classList.toggle("active", deliveryType === "entrega");
     document.getElementById("toggleRetirada").classList.toggle("active", deliveryType === "retirada");
-    
+
+    var avisoExistente = document.querySelector(".retirada-aviso");
+    if (avisoExistente) avisoExistente.remove();
+    if (deliveryType === "retirada"){
+      var toggleRow = document.getElementById("toggleRetirada").parentElement;
+      var aviso = document.createElement("span");
+      aviso.className = "retirada-aviso";
+      aviso.textContent = "📍 O endereço para retirada será mostrado após você finalizar o pedido.";
+      toggleRow.parentElement.appendChild(aviso);
+    }
+
     renderCheckoutFooter();
   }
 
@@ -1121,6 +1133,8 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
       }
     }
 
+        var eraRetirada = deliveryType === "retirada";
+
     cart = [];
     appliedCoupon = null;
     selectedBairroId = null;
@@ -1129,6 +1143,10 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     renderFloatingCart();
     closeCheckout();
     showToast("Pedido enviado! Confirme no WhatsApp.");
+
+    if (eraRetirada){
+      setTimeout(function(){ mostrarEnderecoRetirada(); }, 600);
+    }
   }
   function formatDateBR(iso){
     if (!iso) return "";
@@ -1199,6 +1217,82 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     return lines.join("\n");
   }
 
+    function mostrarEnderecoRetirada(){
+    var enderecoCodificado = encodeURIComponent(ENDERECO_LOJA);
+    var linkMaps = "https://www.google.com/maps/search/?api=1&query=" + enderecoCodificado;
+    var linkWaze = "https://waze.com/ul?q=" + enderecoCodificado + "&navigate=yes";
+
+    var overlay = document.createElement("div");
+    overlay.className = "overlay open";
+    overlay.id = "retiradaOverlay";
+    overlay.innerHTML =
+      '<div class="sheet" style="max-width:400px;">' +
+        '<button class="sheet-close" id="closeRetirada">✕</button>' +
+        '<div class="sheet-scroll" style="text-align:center;">' +
+          '<div style="font-size:2.4rem; margin-bottom:6px;">📍</div>' +
+             '<h2>Endereço para retirada</h2>' +
+          '<p class="desc">' + ENDERECO_LOJA + '</p>' +
+          '<div style="display:flex; flex-direction:column; gap:10px; margin-top:16px;">' +
+            '<button class="btn-primary" id="btnCopiarEndereco">Copiar endereço</button>' +
+            '<a class="btn-secondary" style="display:block; text-decoration:none; text-align:center;" href="' + linkMaps + '" target="_blank">Abrir no Google Maps</a>' +
+            '<a class="btn-secondary" style="display:block; text-decoration:none; text-align:center;" href="' + linkWaze + '" target="_blank">Abrir no Waze</a>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    document.getElementById("closeRetirada").addEventListener("click", function(){
+      overlay.remove();
+    });
+    overlay.addEventListener("click", function(e){
+      if (e.target === overlay) overlay.remove();
+    });
+    document.getElementById("btnCopiarEndereco").addEventListener("click", function(){
+      navigator.clipboard.writeText(ENDERECO_LOJA).then(function(){
+        showToast("Endereço copiado!");
+      }).catch(function(){
+        showToast("Não foi possível copiar. Copie manualmente.");
+      });
+    });
+  }
+  function mostrarEnderecoRetirada(){
+    var enderecoCodificado = encodeURIComponent(ENDERECO_LOJA);
+    var linkMaps = "https://www.google.com/maps/search/?api=1&query=" + enderecoCodificado;
+    var linkWaze = "https://waze.com/ul?q=" + enderecoCodificado + "&navigate=yes";
+
+    var overlay = document.createElement("div");
+    overlay.className = "overlay open";
+    overlay.id = "retiradaOverlay";
+    overlay.innerHTML =
+      '<div class="sheet" style="max-width:400px;">' +
+        '<button class="sheet-close" id="closeRetirada">✕</button>' +
+        '<div class="sheet-scroll" style="text-align:center;">' +
+          '<div style="font-size:2.4rem; margin-bottom:6px;">📍</div>' +
+          '<h2>Endereço para retirada</h2>' +
+          '<p class="desc">' + ENDERECO_LOJA + '</p>' +
+          '<div style="display:flex; flex-direction:column; gap:10px; margin-top:16px;">' +
+            '<button class="btn-primary" id="btnCopiarEndereco">Copiar endereço</button>' +
+            '<a class="btn-secondary" style="display:block; text-decoration:none; text-align:center;" href="' + linkMaps + '" target="_blank">Abrir no Google Maps</a>' +
+            '<a class="btn-secondary" style="display:block; text-decoration:none; text-align:center;" href="' + linkWaze + '" target="_blank">Abrir no Waze</a>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    document.getElementById("closeRetirada").addEventListener("click", function(){
+      overlay.remove();
+    });
+    overlay.addEventListener("click", function(e){
+      if (e.target === overlay) overlay.remove();
+    });
+    document.getElementById("btnCopiarEndereco").addEventListener("click", function(){
+      navigator.clipboard.writeText(ENDERECO_LOJA).then(function(){
+        showToast("Endereço copiado!");
+      }).catch(function(){
+        showToast("Não foi possível copiar. Copie manualmente.");
+      });
+    });
+  }
   /* ============ EMBERS (efeito visual) ============ */
   function spawnEmbers(containerId, count){
     var wrap = document.getElementById(containerId);

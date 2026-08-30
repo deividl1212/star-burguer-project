@@ -906,4 +906,11 @@
   transition:transform 0.12s ease;
 }
 .btn-pix-copy:active{ transform:scale(0.97); opacity:0.9; }
-
+/* ---------- Aviso de retirada ---------- */
+.retirada-aviso{
+  display:block;
+  font-size:0.75rem;
+  color:var(--gold);
+  margin-top:8px;
+  line-height:1.4;
+}
