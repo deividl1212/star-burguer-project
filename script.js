@@ -94,9 +94,9 @@
     var client = getSupabaseClient();
     if (!client) return Promise.resolve(false);
 
-    return client
+        return client
       .from("kits")
-      .select("id, nome, descricao, tier, ativo, ordem, destaque, kit_opcoes ( id, label, preco, preco_promocional, itens, ordem )")
+      .select("id, nome, descricao, tier, ativo, ordem, destaque, kit_opcoes ( id, label, preco, preco_promocional, itens, ordem, tamanho )")
       .eq("ativo", true)
       .order("destaque", { ascending: false })
       .order("ordem", { ascending: true })
@@ -115,8 +115,8 @@
             tierColor: TIER_COLORS[row.tier] || TIER_COLORS.ouro,
             desc: row.descricao,
             destaque: !!row.destaque,
-            opcoes: opcoesOrdenadas.map(function(o){
-              return { label: o.label, preco: Number(o.preco), precoPromocional: o.preco_promocional != null ? Number(o.preco_promocional) : null, itens: o.itens || [] };
+                        opcoes: opcoesOrdenadas.map(function(o){
+              return { label: o.label, preco: Number(o.preco), precoPromocional: o.preco_promocional != null ? Number(o.preco_promocional) : null, itens: o.itens || [], tamanho: o.tamanho || null };
             })
           };
         });
@@ -271,9 +271,9 @@
     var client = getSupabaseClient();
     if (!client) return;
 
-        client
+               client
       .from("adicionais")
-      .select("id, nome, preco, aplica_todos_kits, kits_aplicaveis, ordem, ativo")
+      .select("id, nome, preco, tamanho, aplica_todos_tamanhos, ordem, ativo")
       .eq("ativo", true)
       .order("ordem", { ascending: true })
       .then(function(res){
@@ -284,9 +284,9 @@
 
   function findAdicional(id){ return adicionaisCache.find(function(a){ return a.id === id; }); }
 
-  function adicionaisParaKit(kitId){
+    function adicionaisParaOpcao(opt){
     return adicionaisCache.filter(function(a){
-      return a.aplica_todos_kits || (a.kits_aplicaveis || []).indexOf(kitId) !== -1;
+      return a.aplica_todos_tamanhos || a.tamanho === opt.tamanho;
     });
   }
   function normalizarTexto(s){
@@ -505,10 +505,10 @@
         ) +
         '<div class="includes-title">O que está incluso</div>' +
         '<ul class="includes">' + opt.itens.map(function(it){ return "<li>" + it + "</li>"; }).join("") + '</ul>' +
-                (adicionaisParaKit(kit.id).length > 0 ?
+                                (adicionaisParaOpcao(opt).length > 0 ?
           '<div class="includes-title">Adicionais (opcional)</div>' +
           '<div class="adicionais-list" id="adicionaisList">' +
-            adicionaisParaKit(kit.id).map(function(a){
+            adicionaisParaOpcao(opt).map(function(a){
               var qtdAtual = activeAdicionaisQtd[a.id] || 0;
               return '<div class="adicional-item">' +
                 '<span class="adicional-info-label">' + a.nome + '<span class="adicional-preco num"> + ' + brl(Number(a.preco)) + '</span></span>' +
@@ -586,13 +586,23 @@
     updateQtyUI(kit);
   }
 
-  function compartilharKit(kit){
+    function compartilharKit(kit){
     var opt = kit.opcoes[activeOptIndex];
     var precoEfetivo = precoEfetivoOpcao(opt);
+    var temPromo = opt.precoPromocional != null;
+
+    var linhaPreco = temPromo
+      ? "💥 De R$ " + opt.preco.toFixed(2).replace(".", ",") + " por *" + brl(precoEfetivo) + "*"
+      : "💰 " + brl(precoEfetivo);
+
+    var itensTexto = (opt.itens || []).map(function(it){ return "🍔 " + it; }).join("\n");
+
     var textoCompartilhar =
-      "🔥 Confira o " + kit.nome + " da Star Burguer!\n" +
-      opt.label + " por " + brl(precoEfetivo) + "\n\n" +
-      "Peça já: " + window.location.origin;
+      "🔥🔥🔥 *" + kit.nome.toUpperCase() + "* 🔥🔥🔥\n" +
+      "_" + opt.label + "_\n\n" +
+      itensTexto + "\n\n" +
+      linhaPreco + "\n\n" +
+      "📲 Peça já: " + window.location.origin;
 
     if (navigator.share){
       navigator.share({
@@ -1308,44 +1318,7 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
       });
     });
   }
-  function mostrarEnderecoRetirada(){
-    var enderecoCodificado = encodeURIComponent(ENDERECO_LOJA);
-    var linkMaps = "https://www.google.com/maps/search/?api=1&query=" + enderecoCodificado;
-    var linkWaze = "https://waze.com/ul?q=" + enderecoCodificado + "&navigate=yes";
-
-    var overlay = document.createElement("div");
-    overlay.className = "overlay open";
-    overlay.id = "retiradaOverlay";
-    overlay.innerHTML =
-      '<div class="sheet" style="max-width:400px;">' +
-        '<button class="sheet-close" id="closeRetirada">✕</button>' +
-        '<div class="sheet-scroll" style="text-align:center;">' +
-          '<div style="font-size:2.4rem; margin-bottom:6px;">📍</div>' +
-          '<h2>Endereço para retirada</h2>' +
-          '<p class="desc">' + ENDERECO_LOJA + '</p>' +
-          '<div style="display:flex; flex-direction:column; gap:10px; margin-top:16px;">' +
-            '<button class="btn-primary" id="btnCopiarEndereco">Copiar endereço</button>' +
-            '<a class="btn-secondary" style="display:block; text-decoration:none; text-align:center;" href="' + linkMaps + '" target="_blank">Abrir no Google Maps</a>' +
-            '<a class="btn-secondary" style="display:block; text-decoration:none; text-align:center;" href="' + linkWaze + '" target="_blank">Abrir no Waze</a>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-    document.body.appendChild(overlay);
-
-    document.getElementById("closeRetirada").addEventListener("click", function(){
-      overlay.remove();
-    });
-    overlay.addEventListener("click", function(e){
-      if (e.target === overlay) overlay.remove();
-    });
-    document.getElementById("btnCopiarEndereco").addEventListener("click", function(){
-      navigator.clipboard.writeText(ENDERECO_LOJA).then(function(){
-        showToast("Endereço copiado!");
-      }).catch(function(){
-        showToast("Não foi possível copiar. Copie manualmente.");
-      });
-    });
-  }
+  
   /* ============ EMBERS (efeito visual) ============ */
   function spawnEmbers(containerId, count){
     var wrap = document.getElementById(containerId);

@@ -107,9 +107,9 @@
   /* ============ LISTAGEM DE KITS ============ */
   function loadKits(){
     kitsList.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Carregando...</p>';
-    supabase
+        supabase
       .from("kits")
-     .select("id, nome, descricao, tier, ativo, ordem, destaque, kit_opcoes ( id, label, preco, preco_promocional, itens, ordem )")
+     .select("id, nome, descricao, tier, ativo, ordem, destaque, kit_opcoes ( id, label, preco, preco_promocional, itens, ordem, tamanho )")
       .order("destaque", { ascending: false })
       .order("ordem", { ascending: true })
       .then(function(res){
@@ -234,15 +234,24 @@
     formOverlay.classList.remove("open");
   }
 
- function opcaoCardHTML(opcao, idx){
-    opcao = opcao || { label: "", preco: "", itens: [], preco_promocional: "" };
+  function opcaoCardHTML(opcao, idx){
+    opcao = opcao || { label: "", preco: "", itens: [], preco_promocional: "", tamanho: "" };
     var itensTexto = (opcao.itens || []).join("\n");
+    var tamanhoAtual = opcao.tamanho || "";
     return (
       '<div class="opcao-card" data-idx="' + idx + '">' +
         (idx > 0 ? '<button type="button" class="opcao-remove" data-remove-opcao="' + idx + '">remover opção</button>' : '') +
         '<div class="form-row">' +
           '<div class="field"><label>Rótulo da opção</label><input type="text" class="opcao-label" value="' + (opcao.label || "").replace(/"/g,"&quot;") + '" placeholder="Ex: 6 Carnes"></div>' +
           '<div class="field"><label>Preço (R$)</label><input type="number" step="0.01" class="opcao-preco" value="' + (opcao.preco !== "" ? opcao.preco : "") + '" placeholder="0,00"></div>' +
+        '</div>' +
+        '<div class="field"><label>Tamanho (para vincular adicionais)</label><select class="opcao-tamanho">' +
+          '<option value="" ' + (tamanhoAtual === "" ? "selected" : "") + '>Nenhum / não se aplica</option>' +
+          '<option value="2" ' + (tamanhoAtual === "2" ? "selected" : "") + '>2</option>' +
+          '<option value="6" ' + (tamanhoAtual === "6" ? "selected" : "") + '>6</option>' +
+          '<option value="10" ' + (tamanhoAtual === "10" ? "selected" : "") + '>10</option>' +
+        '</select>' +
+          '<span class="hint" style="margin-top:4px;">Define quais adicionais aparecem para esta opção (ex: "6" mostra os adicionais cadastrados para tamanho 6).</span>' +
         '</div>' +
         '<div class="field"><label>Preço promocional (opcional)</label><input type="number" step="0.01" class="opcao-preco-promo" value="' + (opcao.preco_promocional != null ? opcao.preco_promocional : "") + '" placeholder="Deixe em branco se não houver promoção">' +
           '<span class="hint" style="margin-top:4px;">Se preenchido, o site mostra o preço normal riscado e este em destaque.</span>' +
@@ -314,11 +323,12 @@
     var opcaoCards = document.querySelectorAll("#opcoesContainer .opcao-card");
     var opcoes = [];
     var opcoesValidas = true;
-    opcaoCards.forEach(function(card, i){
+        opcaoCards.forEach(function(card, i){
       var label = card.querySelector(".opcao-label").value.trim();
       var precoStr = card.querySelector(".opcao-preco").value;
       var precoPromoStr = card.querySelector(".opcao-preco-promo").value;
       var itensTexto = card.querySelector(".opcao-itens").value;
+      var tamanho = card.querySelector(".opcao-tamanho").value || null;
       var preco = parseFloat(precoStr);
       var precoPromo = precoPromoStr.trim() === "" ? null : parseFloat(precoPromoStr);
       if (!label || isNaN(preco)){ opcoesValidas = false; }
@@ -326,7 +336,7 @@
         opcoesValidas = false;
       }
       var itens = itensTexto.split("\n").map(function(s){ return s.trim(); }).filter(function(s){ return s.length > 0; });
-      opcoes.push({ label: label, preco: preco, preco_promocional: precoPromo, itens: itens, ordem: i });
+      opcoes.push({ label: label, preco: preco, preco_promocional: precoPromo, itens: itens, ordem: i, tamanho: tamanho });
     });
 
     if (!opcoesValidas || opcoes.length === 0){
@@ -352,8 +362,8 @@
     // Abordagem simples: apaga as opções antigas e insere as atuais do formulário
     supabase.from("kit_opcoes").delete().eq("kit_id", kitId).then(function(res){
       if (res.error){ showMsg("Erro ao salvar opções: " + res.error.message, true); return; }
-      var novasOpcoes = opcoes.map(function(o){
-        return { kit_id: kitId, label: o.label, preco: o.preco, preco_promocional: o.preco_promocional, itens: o.itens, ordem: o.ordem };
+            var novasOpcoes = opcoes.map(function(o){
+        return { kit_id: kitId, label: o.label, preco: o.preco, preco_promocional: o.preco_promocional, itens: o.itens, ordem: o.ordem, tamanho: o.tamanho };
       });
       supabase.from("kit_opcoes").insert(novasOpcoes).then(function(res2){
         if (res2.error){ showMsg("Erro ao salvar opções: " + res2.error.message, true); return; }
@@ -691,12 +701,12 @@
     });
   }
 
-  function loadAdicionais(){
+    function loadAdicionais(){
     var list = document.getElementById("adicionaisList2");
     list.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Carregando...</p>';
     supabase
       .from("adicionais")
-      .select("id, nome, preco, aplica_todos_kits, kits_aplicaveis, ordem, ativo")
+      .select("id, nome, preco, tamanho, aplica_todos_tamanhos, ordem, ativo")
       .order("ordem", { ascending: true })
       .then(function(res){
         if (res.error){
@@ -708,15 +718,34 @@
       });
   }
 
-  function renderAdicionaisList(){
-    var list = document.getElementById("adicionaisList2");
-    if (adicionaisCache.length === 0){
-      list.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum adicional cadastrado ainda.</p>';
-      return;
-    }
+    function loadAdicionais(){
+    var list2 = document.getElementById("adicionaisList2Col");
+    var list6 = document.getElementById("adicionaisList6Col");
+    var list10 = document.getElementById("adicionaisList10Col");
+    list2.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Carregando...</p>';
+    list6.innerHTML = "";
+    list10.innerHTML = "";
+    supabase
+      .from("adicionais")
+      .select("id, nome, preco, tamanho, aplica_todos_tamanhos, ordem, ativo")
+      .order("ordem", { ascending: true })
+      .then(function(res){
+        if (res.error){
+          list2.innerHTML = '<p style="color:var(--red); font-size:0.85rem;">Erro ao carregar: ' + res.error.message + '</p>';
+          return;
+        }
+        adicionaisCache = res.data || [];
+        renderAdicionaisList();
+      });
+  }
 
-    list.innerHTML = adicionaisCache.map(function(a){
-      var abrangenciaTxt = a.aplica_todos_kits ? "Todos os kits" : ((a.kits_aplicaveis || []).length + " kit(s) específico(s)");
+  function renderAdicionaisList(){
+    var list2 = document.getElementById("adicionaisList2Col");
+    var list6 = document.getElementById("adicionaisList6Col");
+    var list10 = document.getElementById("adicionaisList10Col");
+
+    function itemHTML(a){
+      var abrangenciaTxt = a.aplica_todos_tamanhos ? "Todos os tamanhos" : ("Kits de " + (a.tamanho || "?"));
       return (
         '<div class="kit-row ' + (a.ativo ? "" : "inativo") + '" data-id="' + a.id + '">' +
           '<div class="kit-row-info">' +
@@ -730,7 +759,21 @@
           '</div>' +
         '</div>'
       );
-    }).join("");
+    }
+
+    var itensTodos = adicionaisCache.filter(function(a){ return a.aplica_todos_tamanhos; });
+    var itens2 = adicionaisCache.filter(function(a){ return !a.aplica_todos_tamanhos && a.tamanho === "2"; });
+    var itens6 = adicionaisCache.filter(function(a){ return !a.aplica_todos_tamanhos && a.tamanho === "6"; });
+    var itens10 = adicionaisCache.filter(function(a){ return !a.aplica_todos_tamanhos && a.tamanho === "10"; });
+
+    // Adicionais "todos os tamanhos" aparecem em todas as colunas, pra ficar visível onde eles valem
+    var listaFinal2 = itens2.concat(itensTodos);
+    var listaFinal6 = itens6.concat(itensTodos);
+    var listaFinal10 = itens10.concat(itensTodos);
+
+    list2.innerHTML = listaFinal2.length ? listaFinal2.map(itemHTML).join("") : '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum adicional cadastrado para kits de 2.</p>';
+    list6.innerHTML = listaFinal6.length ? listaFinal6.map(itemHTML).join("") : '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum adicional cadastrado para kits de 6.</p>';
+    list10.innerHTML = listaFinal10.length ? listaFinal10.map(itemHTML).join("") : '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum adicional cadastrado para kits de 10.</p>';
 
     document.querySelectorAll("[data-edit-adic]").forEach(function(btn){
       btn.addEventListener("click", function(){ openAdicionalForm(btn.getAttribute("data-edit-adic")); });
@@ -770,22 +813,22 @@
     if (text){ setTimeout(function(){ adicionalMsgAdmin.textContent = ""; }, 3000); }
   }
 
-    function openAdicionalForm(id){
+        function openAdicionalForm(id){
     editingAdicionalId = id;
     var a = id ? adicionaisCache.find(function(x){ return x.id === id; }) : null;
-    var kitsCheckboxes = kitsCache.map(function(k){
-      var checked = a && (a.kits_aplicaveis || []).indexOf(k.id) !== -1 ? "checked" : "";
-      return '<label class="cupom-kit-check"><input type="checkbox" class="adicKitCheckbox" value="' + k.id + '" ' + checked + '> ' + k.nome + '</label>';
-    }).join("");
+    var tamanhoAtual = a ? (a.tamanho || "") : "";
 
     formCard.innerHTML =
       '<h2>' + (a ? "Editar adicional" : "Novo adicional") + '</h2>' +
       '<div class="field"><label>Nome do adicional</label><input type="text" id="fAdicNome" value="' + (a ? a.nome.replace(/"/g,"&quot;") : "") + '" placeholder="Ex: Bacon, 12 fatias"></div>' +
       '<div class="field"><label>Preço (R$)</label><input type="number" step="0.01" id="fAdicPreco" value="' + (a ? a.preco : "") + '" placeholder="0,00"></div>' +
-      '<div class="toggle-ativo"><input type="checkbox" id="fAdicAplicaTodos" ' + (a && a.aplica_todos_kits ? "checked" : "") + '><label for="fAdicAplicaTodos" style="margin:0;">Aplica a todos os kits</label></div>' +
-      '<div class="field" id="fieldAdicKitsEspecificos" style="display:' + (a && a.aplica_todos_kits ? "none" : "block") + ';">' +
-        '<label>Kits específicos</label>' +
-        '<div class="cupom-kits-list">' + (kitsCheckboxes || '<p class="hint" style="margin:0;">Nenhum kit cadastrado ainda.</p>') + '</div>' +
+      '<div class="toggle-ativo"><input type="checkbox" id="fAdicAplicaTodos" ' + (a && a.aplica_todos_tamanhos ? "checked" : "") + '><label for="fAdicAplicaTodos" style="margin:0;">Aplica a todos os tamanhos</label></div>' +
+      '<div class="field" id="fieldAdicTamanho" style="display:' + (a && a.aplica_todos_tamanhos ? "none" : "block") + ';">' +
+        '<label>Para qual tamanho de kit</label><select id="fAdicTamanho">' +
+          '<option value="2" ' + (tamanhoAtual === "2" ? "selected" : "") + '>Kits de 2</option>' +
+          '<option value="6" ' + (tamanhoAtual === "6" ? "selected" : "") + '>Kits de 6</option>' +
+          '<option value="10" ' + (tamanhoAtual === "10" ? "selected" : "") + '>Kits de 10</option>' +
+        '</select>' +
       '</div>' +
       '<div class="toggle-ativo"><input type="checkbox" id="fAdicAtivo" ' + (!a || a.ativo ? "checked" : "") + '><label for="fAdicAtivo" style="margin:0;">Adicional ativo</label></div>' +
 
@@ -796,7 +839,7 @@
 
     document.getElementById("btnCancelForm").addEventListener("click", closeForm);
     document.getElementById("fAdicAplicaTodos").addEventListener("change", function(){
-      document.getElementById("fieldAdicKitsEspecificos").style.display = this.checked ? "none" : "block";
+      document.getElementById("fieldAdicTamanho").style.display = this.checked ? "none" : "block";
     });
     document.getElementById("btnSaveAdicionalForm").addEventListener("click", saveAdicionalForm);
     formOverlay.classList.add("open");
@@ -810,15 +853,12 @@
     if (!nome){ showAdicionalMsg("Informe o nome do adicional.", true); return; }
     if (isNaN(preco) || preco < 0){ showAdicionalMsg("Informe um preço válido.", true); return; }
 
-    var kitsAplicaveis = [];
+    var tamanho = null;
     if (!aplicaTodos){
-      document.querySelectorAll(".adicKitCheckbox:checked").forEach(function(chk){
-        kitsAplicaveis.push(chk.value);
-      });
-      if (kitsAplicaveis.length === 0){ showAdicionalMsg("Selecione pelo menos um kit, ou marque 'Aplica a todos os kits'.", true); return; }
+      tamanho = document.getElementById("fAdicTamanho").value;
     }
 
-    var payload = { nome: nome, preco: preco, aplica_todos_kits: aplicaTodos, kits_aplicaveis: kitsAplicaveis, ativo: ativo };
+    var payload = { nome: nome, preco: preco, aplica_todos_tamanhos: aplicaTodos, tamanho: tamanho, ativo: ativo };
 
     var query = editingAdicionalId
       ? supabase.from("adicionais").update(payload).eq("id", editingAdicionalId)
