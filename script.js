@@ -284,8 +284,11 @@
 
   function findAdicional(id){ return adicionaisCache.find(function(a){ return a.id === id; }); }
 
-    function adicionaisParaOpcao(opt){
+      function adicionaisParaOpcao(opt, kitId){
     return adicionaisCache.filter(function(a){
+      if (a.modo_abrangencia === "kits"){
+        return (a.kits_aplicaveis || []).indexOf(kitId) !== -1;
+      }
       return a.aplica_todos_tamanhos || a.tamanho === opt.tamanho;
     });
   }
@@ -505,10 +508,10 @@
         ) +
         '<div class="includes-title">O que está incluso</div>' +
         '<ul class="includes">' + opt.itens.map(function(it){ return "<li>" + it + "</li>"; }).join("") + '</ul>' +
-                                (adicionaisParaOpcao(opt).length > 0 ?
+                                                (adicionaisParaOpcao(opt, kit.id).length > 0 ?
           '<div class="includes-title">Adicionais (opcional)</div>' +
           '<div class="adicionais-list" id="adicionaisList">' +
-            adicionaisParaOpcao(opt).map(function(a){
+            adicionaisParaOpcao(opt, kit.id).map(function(a){
               var qtdAtual = activeAdicionaisQtd[a.id] || 0;
               return '<div class="adicional-item">' +
                 '<span class="adicional-info-label">' + a.nome + '<span class="adicional-preco num"> + ' + brl(Number(a.preco)) + '</span></span>' +

@@ -706,7 +706,7 @@
     list.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Carregando...</p>';
     supabase
       .from("adicionais")
-      .select("id, nome, preco, tamanho, aplica_todos_tamanhos, ordem, ativo")
+            .select("id, nome, preco, tamanho, aplica_todos_tamanhos, modo_abrangencia, kits_aplicaveis, ordem, ativo")
       .order("ordem", { ascending: true })
       .then(function(res){
         if (res.error){
@@ -726,8 +726,8 @@
     list6.innerHTML = "";
     list10.innerHTML = "";
     supabase
-      .from("adicionais")
-      .select("id, nome, preco, tamanho, aplica_todos_tamanhos, ordem, ativo")
+           .from("adicionais")
+      .select("id, nome, preco, tamanho, aplica_todos_tamanhos, modo_abrangencia, kits_aplicaveis, ordem, ativo")
       .order("ordem", { ascending: true })
       .then(function(res){
         if (res.error){
@@ -744,8 +744,10 @@
     var list6 = document.getElementById("adicionaisList6Col");
     var list10 = document.getElementById("adicionaisList10Col");
 
-    function itemHTML(a){
-      var abrangenciaTxt = a.aplica_todos_tamanhos ? "Todos os tamanhos" : ("Kits de " + (a.tamanho || "?"));
+        function itemHTML(a){
+      var abrangenciaTxt = a.modo_abrangencia === "kits"
+        ? ((a.kits_aplicaveis || []).length + " kit(s) específico(s)")
+        : (a.aplica_todos_tamanhos ? "Todos os tamanhos" : ("Kits de " + (a.tamanho || "?")));
       return (
         '<div class="kit-row ' + (a.ativo ? "" : "inativo") + '" data-id="' + a.id + '">' +
           '<div class="kit-row-info">' +
@@ -761,12 +763,14 @@
       );
     }
 
-    var itensTodos = adicionaisCache.filter(function(a){ return a.aplica_todos_tamanhos; });
-    var itens2 = adicionaisCache.filter(function(a){ return !a.aplica_todos_tamanhos && a.tamanho === "2"; });
-    var itens6 = adicionaisCache.filter(function(a){ return !a.aplica_todos_tamanhos && a.tamanho === "6"; });
-    var itens10 = adicionaisCache.filter(function(a){ return !a.aplica_todos_tamanhos && a.tamanho === "10"; });
+       var itensTamanho = adicionaisCache.filter(function(a){ return a.modo_abrangencia !== "kits"; });
+    var itensKitsEspecificos = adicionaisCache.filter(function(a){ return a.modo_abrangencia === "kits"; });
 
-    // Adicionais "todos os tamanhos" aparecem em todas as colunas, pra ficar visível onde eles valem
+    var itensTodos = itensTamanho.filter(function(a){ return a.aplica_todos_tamanhos; });
+    var itens2 = itensTamanho.filter(function(a){ return !a.aplica_todos_tamanhos && a.tamanho === "2"; });
+    var itens6 = itensTamanho.filter(function(a){ return !a.aplica_todos_tamanhos && a.tamanho === "6"; });
+    var itens10 = itensTamanho.filter(function(a){ return !a.aplica_todos_tamanhos && a.tamanho === "10"; });
+
     var listaFinal2 = itens2.concat(itensTodos);
     var listaFinal6 = itens6.concat(itensTodos);
     var listaFinal10 = itens10.concat(itensTodos);
@@ -774,6 +778,11 @@
     list2.innerHTML = listaFinal2.length ? listaFinal2.map(itemHTML).join("") : '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum adicional cadastrado para kits de 2.</p>';
     list6.innerHTML = listaFinal6.length ? listaFinal6.map(itemHTML).join("") : '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum adicional cadastrado para kits de 6.</p>';
     list10.innerHTML = listaFinal10.length ? listaFinal10.map(itemHTML).join("") : '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum adicional cadastrado para kits de 10.</p>';
+
+    var listKitsEspecificos = document.getElementById("adicionaisListKitsCol");
+    if (listKitsEspecificos){
+      listKitsEspecificos.innerHTML = itensKitsEspecificos.length ? itensKitsEspecificos.map(itemHTML).join("") : '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum adicional cadastrado por kit específico.</p>';
+    }
 
     document.querySelectorAll("[data-edit-adic]").forEach(function(btn){
       btn.addEventListener("click", function(){ openAdicionalForm(btn.getAttribute("data-edit-adic")); });
@@ -813,23 +822,44 @@
     if (text){ setTimeout(function(){ adicionalMsgAdmin.textContent = ""; }, 3000); }
   }
 
-        function openAdicionalForm(id){
+           function openAdicionalForm(id){
     editingAdicionalId = id;
     var a = id ? adicionaisCache.find(function(x){ return x.id === id; }) : null;
     var tamanhoAtual = a ? (a.tamanho || "") : "";
+    var modoAtual = a ? (a.modo_abrangencia || "tamanho") : "tamanho";
+    var kitsCheckboxes = kitsCache.map(function(k){
+      var checked = a && (a.kits_aplicaveis || []).indexOf(k.id) !== -1 ? "checked" : "";
+      return '<label class="cupom-kit-check"><input type="checkbox" class="adicKitCheckbox" value="' + k.id + '" ' + checked + '> ' + k.nome + '</label>';
+    }).join("");
 
     formCard.innerHTML =
       '<h2>' + (a ? "Editar adicional" : "Novo adicional") + '</h2>' +
       '<div class="field"><label>Nome do adicional</label><input type="text" id="fAdicNome" value="' + (a ? a.nome.replace(/"/g,"&quot;") : "") + '" placeholder="Ex: Bacon, 12 fatias"></div>' +
       '<div class="field"><label>Preço (R$)</label><input type="number" step="0.01" id="fAdicPreco" value="' + (a ? a.preco : "") + '" placeholder="0,00"></div>' +
-      '<div class="toggle-ativo"><input type="checkbox" id="fAdicAplicaTodos" ' + (a && a.aplica_todos_tamanhos ? "checked" : "") + '><label for="fAdicAplicaTodos" style="margin:0;">Aplica a todos os tamanhos</label></div>' +
-      '<div class="field" id="fieldAdicTamanho" style="display:' + (a && a.aplica_todos_tamanhos ? "none" : "block") + ';">' +
-        '<label>Para qual tamanho de kit</label><select id="fAdicTamanho">' +
-          '<option value="2" ' + (tamanhoAtual === "2" ? "selected" : "") + '>Kits de 2</option>' +
-          '<option value="6" ' + (tamanhoAtual === "6" ? "selected" : "") + '>Kits de 6</option>' +
-          '<option value="10" ' + (tamanhoAtual === "10" ? "selected" : "") + '>Kits de 10</option>' +
-        '</select>' +
+
+      '<div class="field"><label>Como este adicional deve ser vinculado?</label>' +
+        '<div class="toggle-row">' +
+          '<button type="button" class="toggle-btn ' + (modoAtual==="tamanho"?"active":"") + '" id="modoTamanhoBtn">Por tamanho (2/6/10)</button>' +
+          '<button type="button" class="toggle-btn ' + (modoAtual==="kits"?"active":"") + '" id="modoKitsBtn">Por kit específico</button>' +
+        '</div>' +
       '</div>' +
+
+      '<div class="field" id="fieldModoTamanho" style="display:' + (modoAtual==="tamanho"?"block":"none") + ';">' +
+        '<div class="toggle-ativo"><input type="checkbox" id="fAdicAplicaTodos" ' + (a && a.aplica_todos_tamanhos ? "checked" : "") + '><label for="fAdicAplicaTodos" style="margin:0;">Aplica a todos os tamanhos</label></div>' +
+        '<div class="field" id="fieldAdicTamanho" style="display:' + (a && a.aplica_todos_tamanhos ? "none" : "block") + ';">' +
+          '<label>Para qual tamanho de kit</label><select id="fAdicTamanho">' +
+            '<option value="2" ' + (tamanhoAtual === "2" ? "selected" : "") + '>Kits de 2</option>' +
+            '<option value="6" ' + (tamanhoAtual === "6" ? "selected" : "") + '>Kits de 6</option>' +
+            '<option value="10" ' + (tamanhoAtual === "10" ? "selected" : "") + '>Kits de 10</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="field" id="fieldModoKits" style="display:' + (modoAtual==="kits"?"block":"none") + ';">' +
+        '<label>Kits específicos</label>' +
+        '<div class="cupom-kits-list">' + (kitsCheckboxes || '<p class="hint" style="margin:0;">Nenhum kit cadastrado ainda.</p>') + '</div>' +
+      '</div>' +
+
       '<div class="toggle-ativo"><input type="checkbox" id="fAdicAtivo" ' + (!a || a.ativo ? "checked" : "") + '><label for="fAdicAtivo" style="margin:0;">Adicional ativo</label></div>' +
 
       '<div class="form-actions">' +
@@ -837,28 +867,56 @@
         '<button type="button" class="btn-primary" id="btnSaveAdicionalForm">Salvar</button>' +
       '</div>';
 
+    var modoAtualLocal = modoAtual;
+
     document.getElementById("btnCancelForm").addEventListener("click", closeForm);
     document.getElementById("fAdicAplicaTodos").addEventListener("change", function(){
       document.getElementById("fieldAdicTamanho").style.display = this.checked ? "none" : "block";
     });
-    document.getElementById("btnSaveAdicionalForm").addEventListener("click", saveAdicionalForm);
+    document.getElementById("modoTamanhoBtn").addEventListener("click", function(){
+      modoAtualLocal = "tamanho";
+      document.getElementById("modoTamanhoBtn").classList.add("active");
+      document.getElementById("modoKitsBtn").classList.remove("active");
+      document.getElementById("fieldModoTamanho").style.display = "block";
+      document.getElementById("fieldModoKits").style.display = "none";
+    });
+    document.getElementById("modoKitsBtn").addEventListener("click", function(){
+      modoAtualLocal = "kits";
+      document.getElementById("modoKitsBtn").classList.add("active");
+      document.getElementById("modoTamanhoBtn").classList.remove("active");
+      document.getElementById("fieldModoKits").style.display = "block";
+      document.getElementById("fieldModoTamanho").style.display = "none";
+    });
+    document.getElementById("btnSaveAdicionalForm").addEventListener("click", function(){
+      saveAdicionalForm(modoAtualLocal);
+    });
     formOverlay.classList.add("open");
   }
-    function saveAdicionalForm(){
+    function saveAdicionalForm(modo){
     var nome = document.getElementById("fAdicNome").value.trim();
     var preco = parseFloat(document.getElementById("fAdicPreco").value);
-    var aplicaTodos = document.getElementById("fAdicAplicaTodos").checked;
     var ativo = document.getElementById("fAdicAtivo").checked;
 
     if (!nome){ showAdicionalMsg("Informe o nome do adicional.", true); return; }
     if (isNaN(preco) || preco < 0){ showAdicionalMsg("Informe um preço válido.", true); return; }
 
-    var tamanho = null;
-    if (!aplicaTodos){
-      tamanho = document.getElementById("fAdicTamanho").value;
-    }
+    var payload = { nome: nome, preco: preco, ativo: ativo, modo_abrangencia: modo };
 
-    var payload = { nome: nome, preco: preco, aplica_todos_tamanhos: aplicaTodos, tamanho: tamanho, ativo: ativo };
+    if (modo === "tamanho"){
+      var aplicaTodos = document.getElementById("fAdicAplicaTodos").checked;
+      payload.aplica_todos_tamanhos = aplicaTodos;
+      payload.tamanho = aplicaTodos ? null : document.getElementById("fAdicTamanho").value;
+      payload.kits_aplicaveis = [];
+    } else {
+      var kitsAplicaveis = [];
+      document.querySelectorAll(".adicKitCheckbox:checked").forEach(function(chk){
+        kitsAplicaveis.push(chk.value);
+      });
+      if (kitsAplicaveis.length === 0){ showAdicionalMsg("Selecione pelo menos um kit.", true); return; }
+      payload.kits_aplicaveis = kitsAplicaveis;
+      payload.aplica_todos_tamanhos = false;
+      payload.tamanho = null;
+    }
 
     var query = editingAdicionalId
       ? supabase.from("adicionais").update(payload).eq("id", editingAdicionalId)
