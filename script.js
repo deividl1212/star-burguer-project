@@ -133,7 +133,7 @@
   var activeKitId = null;
   var activeOptIndex = 0;
   var activeQty = 1;
-  var activeAdicionais = []; // ids dos adicionais marcados no modal atual
+    var activeAdicionaisQtd = {}; // { adicionalId: quantidade }
   var adicionaisCache = [];
   var deliveryType = "entrega"; // ou "retirada"
   var paymentMethod = null;
@@ -271,11 +271,10 @@
     var client = getSupabaseClient();
     if (!client) return;
 
-    client
+        client
       .from("adicionais")
-      .select("id, nome, preco, tamanho, ordem, ativo")
+      .select("id, nome, preco, aplica_todos_kits, kits_aplicaveis, ordem, ativo")
       .eq("ativo", true)
-      .order("tamanho", { ascending: true })
       .order("ordem", { ascending: true })
       .then(function(res){
         if (res.error || !res.data) return;
@@ -285,17 +284,11 @@
 
   function findAdicional(id){ return adicionaisCache.find(function(a){ return a.id === id; }); }
 
-  function tamanhoDaOpcao(label){
-    var m = (label || "").match(/\d+/);
-    return m ? m[0] : null;
+  function adicionaisParaKit(kitId){
+    return adicionaisCache.filter(function(a){
+      return a.aplica_todos_kits || (a.kits_aplicaveis || []).indexOf(kitId) !== -1;
+    });
   }
-
-  function adicionaisParaOpcao(opt){
-    var tam = tamanhoDaOpcao(opt.label);
-    if (!tam) return [];
-    return adicionaisCache.filter(function(a){ return a.tamanho === tam; });
-  }
-
   function normalizarTexto(s){
     return (s || "")
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -469,12 +462,12 @@
 
 
   /* ============ PRODUTO (MODAL) ============ */
-  function openProduct(kitId){
+    function openProduct(kitId){
     var kit = findKit(kitId);
     activeKitId = kitId;
     activeOptIndex = 0;
     activeQty = 1;
-    activeAdicionais = [];
+    activeAdicionaisQtd = {};
     renderProductSheet(kit);
     document.getElementById("productOverlay").classList.add("open");
   }
@@ -512,14 +505,19 @@
         ) +
         '<div class="includes-title">O que está incluso</div>' +
         '<ul class="includes">' + opt.itens.map(function(it){ return "<li>" + it + "</li>"; }).join("") + '</ul>' +
-        (adicionaisParaOpcao(opt).length > 0 ?
+                (adicionaisParaKit(kit.id).length > 0 ?
           '<div class="includes-title">Adicionais (opcional)</div>' +
           '<div class="adicionais-list" id="adicionaisList">' +
-            adicionaisParaOpcao(opt).map(function(a){
-              return '<label class="adicional-item">' +
-                '<span class="adicional-check-label"><input type="checkbox" class="adicionalCheckbox" value="' + a.id + '" ' + (activeAdicionais.indexOf(a.id) !== -1 ? "checked" : "") + '> ' + a.nome + '</span>' +
-                '<span class="adicional-preco num">+ ' + brl(Number(a.preco)) + '</span>' +
-              '</label>';
+            adicionaisParaKit(kit.id).map(function(a){
+              var qtdAtual = activeAdicionaisQtd[a.id] || 0;
+              return '<div class="adicional-item">' +
+                '<span class="adicional-info-label">' + a.nome + '<span class="adicional-preco num"> + ' + brl(Number(a.preco)) + '</span></span>' +
+                '<div class="adicional-qty-control">' +
+                  '<button type="button" class="adicionalQtyMinus" data-adic="' + a.id + '">−</button>' +
+                  '<span class="adicionalQtyValue" data-adic="' + a.id + '">' + qtdAtual + '</span>' +
+                  '<button type="button" class="adicionalQtyPlus" data-adic="' + a.id + '">+</button>' +
+                '</div>' +
+              '</div>';
             }).join("") +
           '</div>'
           : "") +
@@ -530,8 +528,9 @@
             '<button id="qtyMinus">−</button><span id="qtyValue">' + activeQty + '</span><button id="qtyPlus">+</button>' +
           '</div>' +
         '</div>' +
-      '</div>' +
+            '</div>' +
       '<div class="sheet-footer">' +
+        '<button type="button" class="btn-share-kit" id="shareKitBtn">📤 Compartilhar</button>' +
         '<button class="btn-primary" id="addToCartBtn">Adicionar · <span id="addToCartPrice" class="num"></span></button>' +
       '</div>';
 
@@ -550,32 +549,80 @@
     document.getElementById("qtyPlus").addEventListener("click", function(){
       activeQty++; updateQtyUI(kit);
     });
-    document.querySelectorAll(".adicionalCheckbox").forEach(function(chk){
-      chk.addEventListener("change", function(){
-        var id = this.value;
-        if (this.checked){
-          if (activeAdicionais.indexOf(id) === -1) activeAdicionais.push(id);
-        } else {
-          activeAdicionais = activeAdicionais.filter(function(x){ return x !== id; });
+        document.querySelectorAll(".adicionalQtyMinus").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var id = this.getAttribute("data-adic");
+        var atual = activeAdicionaisQtd[id] || 0;
+        if (atual > 0){
+          activeAdicionaisQtd[id] = atual - 1;
+          if (activeAdicionaisQtd[id] === 0) delete activeAdicionaisQtd[id];
+          atualizarAdicionalQtyUI(id);
+          updateQtyUI(kit);
         }
+      });
+    });
+    document.querySelectorAll(".adicionalQtyPlus").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var id = this.getAttribute("data-adic");
+        activeAdicionaisQtd[id] = (activeAdicionaisQtd[id] || 0) + 1;
+        atualizarAdicionalQtyUI(id);
         updateQtyUI(kit);
       });
     });
-    document.getElementById("addToCartBtn").addEventListener("click", function(){
-      addToCart(kit.id, activeOptIndex, activeQty, activeAdicionais.slice());
+        document.getElementById("addToCartBtn").addEventListener("click", function(){
+      var adicionaisEscolhidos = [];
+      Object.keys(activeAdicionaisQtd).forEach(function(id){
+        for (var i = 0; i < activeAdicionaisQtd[id]; i++){
+          adicionaisEscolhidos.push(id);
+        }
+      });
+      addToCart(kit.id, activeOptIndex, activeQty, adicionaisEscolhidos);
       closeProduct();
       showToast("Adicionado ao pedido!");
+    });
+    document.getElementById("shareKitBtn").addEventListener("click", function(){
+      compartilharKit(kit);
     });
     updateQtyUI(kit);
   }
 
-  function precoAdicionaisSelecionados(){
-    return activeAdicionais.reduce(function(sum, id){
-      var a = findAdicional(id);
-      return sum + (a ? Number(a.preco) : 0);
-    }, 0);
+  function compartilharKit(kit){
+    var opt = kit.opcoes[activeOptIndex];
+    var precoEfetivo = precoEfetivoOpcao(opt);
+    var textoCompartilhar =
+      "🔥 Confira o " + kit.nome + " da Star Burguer!\n" +
+      opt.label + " por " + brl(precoEfetivo) + "\n\n" +
+      "Peça já: " + window.location.origin;
+
+    if (navigator.share){
+      navigator.share({
+        title: kit.nome + " — Star Burguer",
+        text: textoCompartilhar
+      }).catch(function(){
+        // Cliente cancelou o compartilhamento, não faz nada
+      });
+    } else {
+      navigator.clipboard.writeText(textoCompartilhar).then(function(){
+        showToast("Link copiado! Cole onde quiser compartilhar.");
+      }).catch(function(){
+        showToast("Não foi possível compartilhar. Copie manualmente.");
+      });
+    }
   }
 
+  function atualizarAdicionalQtyUI(id){
+    var el = document.querySelector('.adicionalQtyValue[data-adic="' + id + '"]');
+    if (el) el.textContent = activeAdicionaisQtd[id] || 0;
+  }
+
+  function precoAdicionaisSelecionados(){
+    var total = 0;
+    Object.keys(activeAdicionaisQtd).forEach(function(id){
+      var a = findAdicional(id);
+      if (a) total += Number(a.preco) * activeAdicionaisQtd[id];
+    });
+    return total;
+  }
   function precoEfetivoOpcao(opt){
     return opt.precoPromocional != null ? opt.precoPromocional : opt.preco;
   }
@@ -604,6 +651,18 @@
     if (existing){ existing.qty += qty; }
     else { cart.push({ kitId: kitId, optIndex: optIndex, qty: qty, adicionaisIds: adicionaisIds }); }
     renderFloatingCart();
+  }
+
+    function agruparAdicionais(adicionaisIds){
+    var contagem = {};
+    (adicionaisIds || []).forEach(function(id){
+      contagem[id] = (contagem[id] || 0) + 1;
+    });
+    return Object.keys(contagem).map(function(id){
+      var a = findAdicional(id);
+      if (!a) return null;
+      return contagem[id] > 1 ? (contagem[id] + "x " + a.nome) : a.nome;
+    }).filter(Boolean);
   }
 
   function precoUnitItem(item){
@@ -670,10 +729,7 @@
         cart.map(function(item, idx){
           var kit = findKit(item.kitId);
           var opt = kit.opcoes[item.optIndex];
-          var nomesAdicionais = (item.adicionaisIds || []).map(function(id){
-            var a = findAdicional(id);
-            return a ? a.nome : null;
-          }).filter(Boolean);
+                    var nomesAdicionais = agruparAdicionais(item.adicionaisIds);
           return '<div class="cart-item" data-idx="' + idx + '">' +
             '<svg class="cart-item-icon" viewBox="0 0 64 64"><use href="#burger-icon"/></svg>' +
             '<div class="cart-item-info">' +
@@ -1162,10 +1218,7 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     cart.forEach(function(item){
       var kit = findKit(item.kitId);
       var opt = kit.opcoes[item.optIndex];
-      var nomesAdicionais = (item.adicionaisIds || []).map(function(id){
-        var a = findAdicional(id);
-        return a ? a.nome : null;
-      }).filter(Boolean);
+            var nomesAdicionais = agruparAdicionais(item.adicionaisIds);
       lines.push("• " + item.qty + "x " + kit.nome + " (" + opt.label + ") — " + brl(precoUnitItem(item) * item.qty));
       if (nomesAdicionais.length){
         lines.push("⚠️ *Adicionais:*");
