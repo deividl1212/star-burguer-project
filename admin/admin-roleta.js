@@ -4,7 +4,7 @@
   function getClient(){ return window.supabaseClient; }
 
   // TODO: troque pelo link real assim que o site da roleta (roleta.html) estiver publicado
-  var ROLETA_URL_BASE = "http://127.0.0.1:5500/index.html";
+  var ROLETA_URL_BASE = "https://roleta-star-burguer.vercel.app/index.html";
 
   var TIPOS_PREMIO = [
     { value: "desconto_percentual", label: "Desconto percentual (%)" },
