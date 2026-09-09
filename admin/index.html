@@ -45,6 +45,7 @@
 
   <main class="admin-main">
     <div class="admin-tabs">
+      <button class="admin-tab" id="tabPedidos">Pedidos</button>
       <button class="admin-tab active" id="tabKits">Kits</button>
       <button class="admin-tab" id="tabCupons">Cupons</button>
       <button class="admin-tab" id="tabPromocoes">Promoção</button>
@@ -52,6 +53,7 @@
       <button class="admin-tab" id="tabRoletaGiros">Roleta · Giros</button>
 <button class="admin-tab" id="tabRoletaPremios">Roleta · Prêmios</button>
 <button class="admin-tab" id="tabRoletaHistorico">Roleta · Histórico</button>
+
     </div>
 
     <div id="kitsSection">
@@ -146,7 +148,23 @@
         <h2>Histórico de giros</h2>
       </div>
       <p class="admin-msg" id="roletaHistoricoMsg"></p>
-      <div id="roletaHistoricoList" class="kits-list"></div>
+            <div id="roletaHistoricoList" class="kits-list"></div>
+    </div>
+
+        <!-- PEDIDOS: histórico por cliente -->
+    <div id="pedidosSection" class="hidden">
+      <div class="admin-toolbar">
+        <h2>Pedidos por cliente</h2>
+      </div>
+      <p class="admin-msg" id="pedidosMsg"></p>
+      <div class="toggle-row" id="pedidosFiltroRow" style="margin-bottom:16px;">
+        <button type="button" class="toggle-btn active" data-filtro="todos">Todos</button>
+        <button type="button" class="toggle-btn" data-filtro="hoje">Hoje</button>
+        <button type="button" class="toggle-btn" data-filtro="semana">Esta semana</button>
+        <button type="button" class="toggle-btn" data-filtro="mes">Este mês</button>
+      </div>
+            <div id="pedidosTop3" style="margin-bottom:20px;"></div>
+      <div id="pedidosList" class="kits-list"></div>
     </div>
   </main>
 </div>

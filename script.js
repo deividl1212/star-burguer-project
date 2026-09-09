@@ -140,7 +140,7 @@
   var needsChange = null; // true = precisa troco, false = não precisa, null = não escolhido ainda
   var trocoPara = "";
   var appliedCoupon = null; // { cupom_id, codigo, tipo_desconto, valor, aplica_todos_kits, kits_aplicaveis }
-  var bairrosCache = [];
+  var appliedPremioRoleta = null; // { premio_nome, premio_tipo, premio_valor }
   var selectedBairroId = null;
 
   /* ============ HELPERS ============ */
@@ -424,8 +424,9 @@
     }
   }
 
-  function taxaEntregaAtual(){
+    function taxaEntregaAtual(){
     if (deliveryType !== "entrega") return 0;
+    if (appliedPremioRoleta && appliedPremioRoleta.premio_tipo === "frete_gratis") return 0;
     var b = findBairro(selectedBairroId);
     return b ? Number(b.taxa) : 0;
   }
@@ -855,6 +856,7 @@
        '<div class="field"><label>Horário desejado</label><input type="time" id="inputHora"><span class="error-text">Escolha um horário.</span><span class="horario-aviso" id="horarioAviso"></span></div>' +
       '</div>' +
 
+            '<div class="field" id="premioRoletaWrap"></div>' +
       '<div class="field" id="cupomFieldWrap"></div>' +
             '<div class="field" id="fieldPagamento"><label>Forma de pagamento</label>' +
         '<div class="pay-grid">' +
@@ -919,7 +921,15 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
       });
     }
 
-    renderCupomField();
+        renderCupomField();
+    renderPremioRoletaBanner();
+
+    var inputTelefoneEl = document.getElementById("inputTelefone");
+    if (inputTelefoneEl){
+      inputTelefoneEl.addEventListener("blur", function(){
+        verificarPremioRoleta(this.value);
+      });
+    }
 
     var inputEnderecoEl = document.getElementById("inputEndereco");
     if (inputEnderecoEl){
@@ -970,18 +980,19 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     renderCheckoutFooter();
   }
 
-  function renderCupomField(){
+    function renderCupomField(){
     var wrap = document.getElementById("cupomFieldWrap");
     if (!wrap) return;
+    var bloqueadoPorPremio = !!appliedPremioRoleta;
     wrap.innerHTML =
       '<label>Cupom de desconto (opcional)</label>' +
       '<div class="cupom-row">' +
-        '<input type="text" id="inputCupom" placeholder="Digite o código" value="' + (appliedCoupon ? appliedCoupon.codigo : "") + '" ' + (appliedCoupon ? "disabled" : "") + '>' +
+        '<input type="text" id="inputCupom" placeholder="Digite o código" value="' + (appliedCoupon ? appliedCoupon.codigo : "") + '" ' + (appliedCoupon || bloqueadoPorPremio ? "disabled" : "") + '>' +
         (appliedCoupon
           ? '<button type="button" class="btn-cupom-remove" id="btnRemoverCupom">Remover</button>'
-          : '<button type="button" class="btn-cupom-aplicar" id="btnAplicarCupom">Aplicar</button>') +
+          : '<button type="button" class="btn-cupom-aplicar" id="btnAplicarCupom" ' + (bloqueadoPorPremio ? "disabled" : "") + '>Aplicar</button>') +
       '</div>' +
-      '<span class="cupom-msg" id="cupomMsg" style="color:' + (appliedCoupon ? "var(--gold)" : "var(--red)") + ';">' + (appliedCoupon ? "Cupom aplicado: -" + (appliedCoupon.tipo_desconto === "percentual" ? appliedCoupon.valor + "%" : brl(appliedCoupon.valor)) : "") + '</span>';
+      '<span class="cupom-msg" id="cupomMsg" style="color:' + (appliedCoupon ? "var(--gold)" : "var(--red)") + ';">' + (appliedCoupon ? "Cupom aplicado: -" + (appliedCoupon.tipo_desconto === "percentual" ? appliedCoupon.valor + "%" : brl(appliedCoupon.valor)) : (bloqueadoPorPremio ? "Indisponível: você já tem um prêmio da roleta aplicado." : "")) + '</span>';
 
     var btnAplicarCupom = document.getElementById("btnAplicarCupom");
     if (btnAplicarCupom){
@@ -997,7 +1008,54 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     }
   }
 
+    function verificarPremioRoleta(telefoneRaw){
+    var telefone = telefoneRaw.replace(/\D/g, "");
+    if (telefone.length < 10) return;
+    var client = getSupabaseClient();
+    if (!client) return;
+
+    client.rpc("verificar_premio_pendente", { p_telefone: telefone }).then(function(res){
+      if (res.error || !res.data || !res.data.length || !res.data[0].tem_premio){
+        appliedPremioRoleta = null;
+        renderPremioRoletaBanner();
+        renderCupomField();
+        renderCheckoutFooter();
+        return;
+      }
+      appliedPremioRoleta = res.data[0];
+      appliedCoupon = null; // prêmio tem prioridade, não acumula
+      renderPremioRoletaBanner();
+      renderCupomField();
+      renderCheckoutFooter();
+    });
+  }
+
+  function renderPremioRoletaBanner(){
+    var wrap = document.getElementById("premioRoletaWrap");
+    if (!wrap) return;
+    if (!appliedPremioRoleta){ wrap.innerHTML = ""; return; }
+
+    var p = appliedPremioRoleta;
+    var descricao;
+    if (p.premio_tipo === "brinde"){
+      descricao = "🎁 Brinde: " + p.premio_nome + " — nossa equipe vai confirmar na entrega.";
+    } else if (p.premio_tipo === "frete_gratis"){
+      descricao = "🚚 Entrega grátis aplicada automaticamente!";
+    } else {
+      descricao = "Desconto aplicado automaticamente!";
+    }
+    wrap.innerHTML =
+      '<div style="background:rgba(212,175,55,0.12); border:2px solid var(--gold); border-radius:12px; padding:12px 16px; font-size:0.88rem; font-weight:600;">' +
+        '🎉 Prêmio aplicado! ' + descricao +
+      '</div>';
+  }
+
   function aplicarCupom(){
+    if (appliedPremioRoleta){
+      var msgElBloqueado = document.getElementById("cupomMsg");
+      if (msgElBloqueado){ msgElBloqueado.style.color = "var(--red)"; msgElBloqueado.textContent = "Você já tem um prêmio da roleta aplicado. Não acumula com cupom."; }
+      return;
+    }
     var codigo = document.getElementById("inputCupom").value.trim();
     var telefone = document.getElementById("inputTelefone").value.trim();
     var msgEl = document.getElementById("cupomMsg");
@@ -1024,7 +1082,14 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     });
   }
 
-  function calcularDesconto(){
+    function calcularDesconto(){
+    if (appliedPremioRoleta && (appliedPremioRoleta.premio_tipo === "desconto_percentual" || appliedPremioRoleta.premio_tipo === "desconto_fixo")){
+      var baseTotalPremio = cartTotal();
+      if (appliedPremioRoleta.premio_tipo === "desconto_percentual"){
+        return baseTotalPremio * (appliedPremioRoleta.premio_valor / 100);
+      }
+      return Math.min(appliedPremioRoleta.premio_valor, baseTotalPremio);
+    }
     if (!appliedCoupon) return 0;
     var baseTotal;
     if (appliedCoupon.aplica_todos_kits){
@@ -1072,9 +1137,9 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     var total = cartTotal() - desconto + taxa;
 
     footer.innerHTML =
-      (appliedCoupon ?
+            ((appliedCoupon || (appliedPremioRoleta && (appliedPremioRoleta.premio_tipo === "desconto_percentual" || appliedPremioRoleta.premio_tipo === "desconto_fixo"))) ?
         '<div class="cart-summary-row" style="font-size:0.85rem; font-weight:600;"><span>Subtotal</span><span class="num">' + brl(cartTotal()) + '</span></div>' +
-        '<div class="cart-summary-row" style="font-size:0.85rem; font-weight:600; color:var(--gold);"><span>Desconto (' + appliedCoupon.codigo + ')</span><span class="num">-' + brl(desconto) + '</span></div>'
+        '<div class="cart-summary-row" style="font-size:0.85rem; font-weight:600; color:var(--gold);"><span>Desconto (' + (appliedCoupon ? appliedCoupon.codigo : "prêmio da roleta") + ')</span><span class="num">-' + brl(desconto) + '</span></div>'
         : "") +
       (deliveryType === "entrega" ?
         '<div class="cart-summary-row" style="font-size:0.85rem; font-weight:600;"><span>Taxa de entrega</span><span class="num">' + (selectedBairroId ? brl(taxa) : "—") + '</span></div>'
@@ -1135,6 +1200,38 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     }
   }
 
+    function montarItensPedido(){
+    return cart.map(function(item){
+      var kit = findKit(item.kitId);
+      var opt = kit.opcoes[item.optIndex];
+      return {
+        kit: kit.nome,
+        opcao: opt.label,
+        qtd: item.qty,
+        preco_unitario: precoUnitItem(item),
+        adicionais: agruparAdicionais(item.adicionaisIds)
+      };
+    });
+  }
+
+  function salvarPedidoNoBanco(nome, telefone){
+    var client = getSupabaseClient();
+    if (!client) return; // sem Supabase configurado, não bloqueia o pedido
+
+    var desconto = calcularDesconto();
+    var taxa = taxaEntregaAtual();
+    var valorTotal = cartTotal() - desconto + taxa;
+
+    client.from("pedidos").insert({
+      telefone: telefone.replace(/\D/g, ""),
+      nome_cliente: nome,
+      itens: montarItensPedido(),
+      valor_total: valorTotal
+    }).then(function(res){
+      if (res.error){ console.warn("Erro ao salvar pedido no banco:", res.error); }
+    });
+  }
+
   function trySendOrder(){
     var nome = document.getElementById("inputNome").value.trim();
     var endereco = deliveryType === "entrega" ? document.getElementById("inputEndereco").value.trim() : "";
@@ -1184,7 +1281,17 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     if (!hora){ horaField.style.borderColor = "var(--red)"; valid = false; }
     else { horaField.style.borderColor = ""; }
 
-    if (!valid){ showToast("Confira os campos destacados"); return; }
+        if (!valid){ showToast("Confira os campos destacados"); return; }
+
+       salvarPedidoNoBanco(nome, telefone);
+    if (appliedPremioRoleta){
+      var clientPremio = getSupabaseClient();
+      if (clientPremio){
+        clientPremio.rpc("marcar_premio_usado", { p_telefone: telefone.replace(/\D/g, "") }).then(function(res){
+          if (res.error){ console.warn("Erro ao marcar prêmio como usado:", res.error); }
+        });
+      }
+    }
 
    var msg = buildWhatsAppMessage({ nome: nome, endereco: endereco, numero: numero, telefone: telefone, data: data, hora: hora, obs: obs });
     var url = "https://wa.me/" + WHATSAPP_NUMBER + "?text=" + encodeURIComponent(msg);
@@ -1204,8 +1311,9 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
 
         var eraRetirada = deliveryType === "retirada";
 
-    cart = [];
+        cart = [];
     appliedCoupon = null;
+    appliedPremioRoleta = null;
     selectedBairroId = null;
     needsChange = null;
     trocoPara = "";
@@ -1240,16 +1348,23 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
         });
       }
     });
-   lines.push("");
+       lines.push("");
     var descontoMsg = calcularDesconto();
     var taxaMsg = taxaEntregaAtual();
-    if (appliedCoupon || (deliveryType === "entrega" && taxaMsg > 0)){
+    if (appliedCoupon || appliedPremioRoleta || (deliveryType === "entrega" && taxaMsg > 0)){
       lines.push("Subtotal: " + brl(cartTotal()));
       if (appliedCoupon){ lines.push("Cupom aplicado (" + appliedCoupon.codigo + "): -" + brl(descontoMsg)); }
-      if (deliveryType === "entrega"){ lines.push("Taxa de entrega: " + (taxaMsg === 0 ? "Grátis" : brl(taxaMsg))); }
+      if (appliedPremioRoleta && (appliedPremioRoleta.premio_tipo === "desconto_percentual" || appliedPremioRoleta.premio_tipo === "desconto_fixo")){
+        lines.push("🎉 Prêmio da roleta (" + appliedPremioRoleta.premio_nome + "): -" + brl(descontoMsg));
+      }
+      if (deliveryType === "entrega"){ lines.push("Taxa de entrega: " + (taxaMsg === 0 ? "Grátis" : brl(taxaMsg)) + (appliedPremioRoleta && appliedPremioRoleta.premio_tipo === "frete_gratis" ? " (prêmio da roleta)" : "")); }
       lines.push("💰 *Total: " + brl(cartTotal() - descontoMsg + taxaMsg) + "*");
     } else {
       lines.push("💰 *Total: " + brl(cartTotal()) + "*");
+    }
+    if (appliedPremioRoleta && appliedPremioRoleta.premio_tipo === "brinde"){
+      lines.push("");
+      lines.push("🎁 *BRINDE GANHO NA ROLETA:* " + appliedPremioRoleta.premio_nome + " — conferir na entrega!");
     }
     lines.push("");
 

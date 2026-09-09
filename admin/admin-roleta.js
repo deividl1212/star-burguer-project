@@ -24,7 +24,8 @@
   /* ===== elementos das seções novas ===== */
   var roletaGirosSection = document.getElementById("roletaGirosSection");
   var roletaPremiosSection = document.getElementById("roletaPremiosSection");
-  var roletaHistoricoSection = document.getElementById("roletaHistoricoSection");
+      var roletaHistoricoSection = document.getElementById("roletaHistoricoSection");
+  var pedidosSection = document.getElementById("pedidosSection");
 
   var roletaGirosMsg = document.getElementById("roletaGirosMsg");
   var roletaPremiosMsg = document.getElementById("roletaPremiosMsg");
@@ -50,7 +51,8 @@
     { tabId: "tabAdicionais", sectionEl: document.getElementById("adicionaisSection") },
     { tabId: "tabRoletaGiros", sectionEl: roletaGirosSection },
     { tabId: "tabRoletaPremios", sectionEl: roletaPremiosSection },
-    { tabId: "tabRoletaHistorico", sectionEl: roletaHistoricoSection }
+        { tabId: "tabRoletaHistorico", sectionEl: roletaHistoricoSection },
+    { tabId: "tabPedidos", sectionEl: pedidosSection }
   ];
 
   function ativarAba(tabIdAlvo){
@@ -68,7 +70,8 @@
     btn.addEventListener("click", function(){
       ativarAba(item.tabId);
       if (item.tabId === "tabRoletaPremios") loadPremiosRoleta();
-      if (item.tabId === "tabRoletaHistorico") loadHistoricoRoleta();
+            if (item.tabId === "tabRoletaHistorico") loadHistoricoRoleta();
+      if (item.tabId === "tabPedidos") loadPedidos();
     });
   });
 
@@ -122,10 +125,10 @@
   btnCompartilharLink.addEventListener("click", function(){
     var link = rgLinkTexto.textContent;
     if (!link) return;
-    if (navigator.share){
+        if (navigator.share){
       navigator.share({
-        title: "Gire e ganhe!",
-        text: "Você ganhou um giro na nossa roleta de prêmios. É só clicar e girar:",
+        title: "🎁 Roleta Star Burguer",
+        text: "🔥 Você ganhou 1 giro GRÁTIS na Roleta de Prêmios da Star Burguer! Desconto, frete grátis ou brinde podem ser seus 🎉 Vale só uma vez, então corre e gira agora:",
         url: link
       }).catch(function(){ /* usuário cancelou o compartilhamento, sem problema */ });
     } else {
@@ -329,4 +332,155 @@
       );
     }).join("");
   }
+  /* ============================================================
+     PEDIDOS — histórico agrupado por telefone
+     ============================================================ */
+  var pedidosList = document.getElementById("pedidosList");
+  var pedidosMsg = document.getElementById("pedidosMsg");
+  var todosPedidosCache = [];
+
+    var filtroPedidosAtual = "todos";
+
+  function loadPedidos(){
+    pedidosList.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Carregando...</p>';
+    getClient()
+      .from("pedidos")
+      .select("id, telefone, nome_cliente, itens, valor_total, criado_em")
+      .order("criado_em", { ascending: false })
+      .limit(500)
+      .then(function(res){
+        if (res.error){
+          pedidosList.innerHTML = '<p style="color:var(--red); font-size:0.85rem;">Erro ao carregar: ' + res.error.message + '</p>';
+          return;
+        }
+        todosPedidosCache = res.data || [];
+        aplicarFiltroPedidos();
+      });
+  }
+
+  document.querySelectorAll("#pedidosFiltroRow [data-filtro]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      filtroPedidosAtual = btn.getAttribute("data-filtro");
+      document.querySelectorAll("#pedidosFiltroRow [data-filtro]").forEach(function(b){
+        b.classList.toggle("active", b === btn);
+      });
+      aplicarFiltroPedidos();
+    });
+  });
+
+  function dentroDoFiltro(dataIso, filtro){
+    var data = new Date(dataIso);
+    var agora = new Date();
+    if (filtro === "todos") return true;
+    if (filtro === "hoje"){
+      return data.toDateString() === agora.toDateString();
+    }
+    if (filtro === "semana"){
+      var seteDiasAtras = new Date(agora.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return data >= seteDiasAtras;
+    }
+    if (filtro === "mes"){
+      return data.getMonth() === agora.getMonth() && data.getFullYear() === agora.getFullYear();
+    }
+    return true;
+  }
+
+    function aplicarFiltroPedidos(){
+    var filtrados = todosPedidosCache.filter(function(p){
+      return dentroDoFiltro(p.criado_em, filtroPedidosAtual);
+    });
+    renderTop3(filtrados);
+    renderClientesAgrupados(filtrados);
+  }
+
+  function renderTop3(pedidosFiltrados){
+    var top3El = document.getElementById("pedidosTop3");
+    if (pedidosFiltrados.length === 0){ top3El.innerHTML = ""; return; }
+
+    var porTelefone = {};
+    pedidosFiltrados.forEach(function(p){
+      if (!porTelefone[p.telefone]) porTelefone[p.telefone] = { telefone: p.telefone, nome: p.nome_cliente || "—", qtd: 0 };
+      porTelefone[p.telefone].qtd++;
+    });
+
+    var ranking = Object.keys(porTelefone).map(function(tel){ return porTelefone[tel]; })
+      .sort(function(a, b){ return b.qtd - a.qtd; })
+      .slice(0, 3);
+
+    var medalhas = ["🥇", "🥈", "🥉"];
+
+    top3El.innerHTML =
+      '<h3 style="font-size:0.95rem; color:var(--gold); margin-bottom:10px;">Top 3 clientes</h3>' +
+      '<div style="display:flex; flex-wrap:wrap; gap:10px;">' +
+        ranking.map(function(r, i){
+          return '<div class="kit-row" style="flex:1; min-width:180px;">' +
+            '<div class="kit-row-info">' +
+              '<h3>' + medalhas[i] + ' ' + r.nome + '</h3>' +
+              '<span>' + r.telefone + ' · ' + r.qtd + ' pedido(s)</span>' +
+            '</div>' +
+          '</div>';
+        }).join("") +
+      '</div>';
+  }
+
+  function renderClientesAgrupados(pedidosFiltrados){
+    if (pedidosFiltrados.length === 0){
+      pedidosList.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum pedido neste período.</p>';
+      return;
+    }
+    var porTelefone = {};
+    pedidosFiltrados.forEach(function(p){
+      if (!porTelefone[p.telefone]) porTelefone[p.telefone] = [];
+      porTelefone[p.telefone].push(p);
+    });
+
+    var telefones = Object.keys(porTelefone).sort(function(a, b){
+      return new Date(porTelefone[b][0].criado_em) - new Date(porTelefone[a][0].criado_em);
+    });
+
+    pedidosList.innerHTML = telefones.map(function(tel){
+      var pedidosDoCliente = porTelefone[tel];
+      var nome = pedidosDoCliente[0].nome_cliente || "—";
+      return (
+        '<div class="kit-row" data-tel="' + tel + '" style="cursor:pointer;">' +
+          '<div class="kit-row-info">' +
+            '<h3>' + nome + ' · ' + tel + '</h3>' +
+            '<span>' + pedidosDoCliente.length + ' pedido(s) · último em ' + formatarData(pedidosDoCliente[0].criado_em) + '</span>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join("");
+
+    pedidosList.querySelectorAll("[data-tel]").forEach(function(el){
+      var tel = el.getAttribute("data-tel");
+      el.addEventListener("click", function(){ abrirDetalhePedidosCliente(tel, porTelefone[tel]); });
+    });
+  }
+
+  function abrirDetalhePedidosCliente(tel, pedidosDoCliente){
+    var itensHtml = pedidosDoCliente.map(function(p){
+      var itensTxt = (p.itens || []).map(function(it){
+        return it.qtd + "x " + it.kit + " (" + it.opcao + ")" + (it.adicionais && it.adicionais.length ? " + " + it.adicionais.join(", ") : "");
+      }).join("<br>");
+      return (
+        '<div class="kit-row">' +
+          '<div class="kit-row-info">' +
+            '<h3>' + formatarData(p.criado_em) + ' · R$ ' + Number(p.valor_total).toFixed(2).replace(".", ",") + '</h3>' +
+            '<span>' + itensTxt + '</span>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join("");
+
+    formCard.innerHTML =
+      '<h2>Pedidos de ' + tel + '</h2>' +
+      '<div style="max-height:400px; overflow-y:auto; margin:16px 0;">' + itensHtml + '</div>' +
+      '<div class="form-actions">' +
+        '<button type="button" class="btn-cancel" id="btnFecharDetalhePedidos">Fechar</button>' +
+      '</div>';
+
+    document.getElementById("btnFecharDetalhePedidos").addEventListener("click", closeForm);
+    formOverlay.classList.add("open");
+  }
+
 })();
