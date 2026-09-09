@@ -139,9 +139,10 @@
   var paymentMethod = null;
   var needsChange = null; // true = precisa troco, false = não precisa, null = não escolhido ainda
   var trocoPara = "";
-  var appliedCoupon = null; // { cupom_id, codigo, tipo_desconto, valor, aplica_todos_kits, kits_aplicaveis }
+    var appliedCoupon = null; // { cupom_id, codigo, tipo_desconto, valor, aplica_todos_kits, kits_aplicaveis }
   var appliedPremioRoleta = null; // { premio_nome, premio_tipo, premio_valor }
   var selectedBairroId = null;
+  var bairrosCache = [];
 
   /* ============ HELPERS ============ */
  function brl(v){
