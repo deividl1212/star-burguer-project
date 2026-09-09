@@ -14,6 +14,7 @@
   }
 
   var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  window.supabaseClient = supabase;
 
   // O Supabase Auth funciona com e-mail. Para o cliente poder logar só com um
   // "usuário" (sem parecer e-mail), completamos automaticamente com este domínio interno.

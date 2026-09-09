@@ -49,6 +49,9 @@
       <button class="admin-tab" id="tabCupons">Cupons</button>
       <button class="admin-tab" id="tabPromocoes">Promoção</button>
       <button class="admin-tab" id="tabAdicionais">Adicionais</button>
+      <button class="admin-tab" id="tabRoletaGiros">Roleta · Giros</button>
+<button class="admin-tab" id="tabRoletaPremios">Roleta · Prêmios</button>
+<button class="admin-tab" id="tabRoletaHistorico">Roleta · Histórico</button>
     </div>
 
     <div id="kitsSection">
@@ -99,7 +102,51 @@
       <div class="admin-toolbar" style="margin-top:20px; margin-bottom:10px;">
         <h3 style="font-size:0.95rem; color:var(--gold);">Adicionais por kit específico (kits com tamanho fora do padrão)</h3>
       </div>
-      <div id="adicionaisListKitsCol" class="kits-list"></div>
+            <div id="adicionaisListKitsCol" class="kits-list"></div>
+    </div>
+
+    <!-- ROLETA: gerar giro -->
+    <div id="roletaGirosSection" class="hidden">
+      <div class="admin-toolbar">
+        <h2>Disponibilizar novo giro</h2>
+      </div>
+      <p class="admin-msg" id="roletaGirosMsg"></p>
+      <div class="field">
+        <label>Telefone do cliente</label>
+        <input type="text" id="rgTelefone" placeholder="Ex: 85988887777 (só números)">
+      </div>
+      <button type="button" class="btn-primary btn-sm" id="btnGerarGiro">Gerar giro</button>
+      <div id="rgResultado" class="hidden" style="margin-top:16px;">
+        <p style="color:var(--cream-dim); font-size:0.85rem; margin-bottom:8px;">Link gerado para este telefone:</p>
+        <div class="kit-row">
+          <div class="kit-row-info">
+            <h3 id="rgLinkTexto" style="word-break:break-all; font-size:0.85rem;"></h3>
+          </div>
+          <div class="kit-row-actions">
+            <button class="icon-btn" title="Copiar link" id="btnCopiarLink">📋</button>
+            <button class="icon-btn" title="Compartilhar" id="btnCompartilharLink">📤</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROLETA: prêmios -->
+    <div id="roletaPremiosSection" class="hidden">
+      <div class="admin-toolbar">
+        <h2>Prêmios da roleta</h2>
+        <button class="btn-primary btn-sm" id="btnNovoPremioRoleta">+ Novo prêmio</button>
+      </div>
+      <p class="admin-msg" id="roletaPremiosMsg"></p>
+      <div id="roletaPremiosList" class="kits-list"></div>
+    </div>
+
+    <!-- ROLETA: histórico -->
+    <div id="roletaHistoricoSection" class="hidden">
+      <div class="admin-toolbar">
+        <h2>Histórico de giros</h2>
+      </div>
+      <p class="admin-msg" id="roletaHistoricoMsg"></p>
+      <div id="roletaHistoricoList" class="kits-list"></div>
     </div>
   </main>
 </div>
@@ -112,5 +159,6 @@
 <script src="/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/admin/admin.js"></script>
+<script src="/admin/admin-roleta.js"></script>
 </body>
 </html>
