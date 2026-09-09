@@ -280,7 +280,7 @@
     roletaHistoricoList.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Carregando...</p>';
     getClient()
       .from("roleta_tokens")
-      .select("id, telefone, status, criado_em, girado_em, resgatado, roleta_premios ( nome )")
+            .select("id, telefone, nome_cliente, status, criado_em, girado_em, resgatado, roleta_premios ( nome )")
       .order("criado_em", { ascending: false })
       .limit(200)
       .then(function(res){
@@ -298,29 +298,35 @@
     return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   }
 
+    function badgeStatus(texto, cor){
+    return '<span style="display:inline-block; padding:3px 10px; border-radius:20px; font-size:0.72rem; font-weight:700; letter-spacing:0.3px; margin-right:8px; background:' + cor + '22; color:' + cor + '; border:1px solid ' + cor + ';">' + texto + '</span>';
+  }
+
   function renderHistoricoRoleta(giros){
     if (giros.length === 0){
       roletaHistoricoList.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum giro gerado ainda.</p>';
       return;
     }
     roletaHistoricoList.innerHTML = giros.map(function(g){
-      var statusTxt;
+      var badge, detalheTxt;
       if (g.status === "disponivel"){
-        statusTxt = "Ainda não girou";
+        badge = badgeStatus("AGUARDANDO GIRO", "#A99B8C");
+        detalheTxt = "";
       } else if (g.resgatado){
-        statusTxt = "Girou · " + (g.roleta_premios ? g.roleta_premios.nome : "prêmio") + " · já usado no pedido";
+        badge = badgeStatus("USADO", "#5C8A3A");
+        detalheTxt = (g.roleta_premios ? g.roleta_premios.nome : "prêmio");
       } else {
-        statusTxt = "Girou · " + (g.roleta_premios ? g.roleta_premios.nome : "prêmio") + " · pendente de uso";
+        badge = badgeStatus("PENDENTE", "#D4AF37");
+        detalheTxt = (g.roleta_premios ? g.roleta_premios.nome : "prêmio");
       }
       return (
         '<div class="kit-row">' +
           '<div class="kit-row-info">' +
-            '<h3>' + g.telefone + '</h3>' +
-            '<span>' + statusTxt + ' · gerado em ' + formatarData(g.criado_em) + (g.girado_em ? " · girou em " + formatarData(g.girado_em) : "") + '</span>' +
+            '<h3>' + badge + g.telefone + (g.nome_cliente ? " · " + g.nome_cliente : "") + '</h3>' +
+            '<span>' + detalheTxt + (detalheTxt ? ' · ' : '') + 'gerado em ' + formatarData(g.criado_em) + (g.girado_em ? " · girou em " + formatarData(g.girado_em) : "") + '</span>' +
           '</div>' +
         '</div>'
       );
     }).join("");
   }
-
 })();
