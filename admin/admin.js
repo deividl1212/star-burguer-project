@@ -381,6 +381,8 @@
     { value: "fixo", label: "Valor fixo (R$)" }
   ];
 
+    var cupomUsosCache = {}; // { cupom_id: quantidade }
+
   function loadCupons(){
     cupomsList.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Carregando...</p>';
     supabase
@@ -393,6 +395,21 @@
           return;
         }
         cupomsCache = res.data || [];
+        carregarContagemUsos();
+      });
+  }
+
+  function carregarContagemUsos(){
+    supabase
+      .from("cupom_usos")
+      .select("cupom_id")
+      .then(function(res){
+        cupomUsosCache = {};
+        if (!res.error && res.data){
+          res.data.forEach(function(u){
+            cupomUsosCache[u.cupom_id] = (cupomUsosCache[u.cupom_id] || 0) + 1;
+          });
+        }
         renderCupomsList();
       });
   }
@@ -404,12 +421,13 @@
     }
     cupomsList.innerHTML = cupomsCache.map(function(c){
       var descontoTxt = c.tipo_desconto === "percentual" ? (Number(c.valor) + "%") : ("R$ " + Number(c.valor).toFixed(2).replace(".", ","));
-      var abrangenciaTxt = c.aplica_todos_kits ? "Todos os kits" : ((c.kits_aplicaveis || []).length + " kit(s) específico(s)");
+            var abrangenciaTxt = c.aplica_todos_kits ? "Todos os kits" : ((c.kits_aplicaveis || []).length + " kit(s) específico(s)");
+      var usosTxt = (cupomUsosCache[c.id] || 0) + " uso(s)";
       return (
         '<div class="kit-row ' + (c.ativo ? "" : "inativo") + '" data-id="' + c.id + '">' +
           '<div class="kit-row-info">' +
             '<h3>' + c.codigo + '</h3>' +
-            '<span>-' + descontoTxt + ' · ' + abrangenciaTxt + ' · limite ' + c.limite_uso_por_telefone + 'x por telefone · ' + (c.ativo ? "Ativo" : "Inativo") + '</span>' +
+            '<span>-' + descontoTxt + ' · ' + abrangenciaTxt + ' · limite ' + c.limite_uso_por_telefone + 'x por telefone · ' + usosTxt + ' · ' + (c.ativo ? "Ativo" : "Inativo") + '</span>' +
           '</div>' +
           '<div class="kit-row-actions">' +
             '<button class="icon-btn" title="Editar" data-edit-cupom="' + c.id + '">✎</button>' +
