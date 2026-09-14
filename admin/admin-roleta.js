@@ -385,12 +385,47 @@
     return true;
   }
 
-    function aplicarFiltroPedidos(){
+      function aplicarFiltroPedidos(){
     var filtrados = todosPedidosCache.filter(function(p){
       return dentroDoFiltro(p.criado_em, filtroPedidosAtual);
     });
     renderTop3(filtrados);
+    renderTopKits(filtrados);
     renderClientesAgrupados(filtrados);
+  }
+
+  function renderTopKits(pedidosFiltrados){
+    var el = document.getElementById("pedidosTopKits");
+    if (!el) return;
+    if (pedidosFiltrados.length === 0){ el.innerHTML = ""; return; }
+
+    var porKit = {};
+    pedidosFiltrados.forEach(function(p){
+      (p.itens || []).forEach(function(it){
+        if (!porKit[it.kit]) porKit[it.kit] = 0;
+        porKit[it.kit] += it.qtd || 1;
+      });
+    });
+
+    var ranking = Object.keys(porKit).map(function(nome){
+      return { nome: nome, qtd: porKit[nome] };
+    }).sort(function(a, b){ return b.qtd - a.qtd; }).slice(0, 3);
+
+    if (ranking.length === 0){ el.innerHTML = ""; return; }
+
+    var medalhas = ["🥇", "🥈", "🥉"];
+    el.innerHTML =
+      '<h3 style="font-size:0.95rem; color:var(--gold); margin-bottom:10px;">Kits mais pedidos</h3>' +
+      '<div style="display:flex; flex-wrap:wrap; gap:10px;">' +
+        ranking.map(function(r, i){
+          return '<div class="kit-row" style="flex:1; min-width:180px;">' +
+            '<div class="kit-row-info">' +
+              '<h3>' + medalhas[i] + ' ' + r.nome + '</h3>' +
+              '<span>' + r.qtd + ' unidade(s) pedida(s)</span>' +
+            '</div>' +
+          '</div>';
+        }).join("") +
+      '</div>';
   }
 
   function renderTop3(pedidosFiltrados){
