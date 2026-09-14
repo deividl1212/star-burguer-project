@@ -381,25 +381,7 @@
     { value: "fixo", label: "Valor fixo (R$)" }
   ];
 
-    var cupomUsosCache = {}; // { cupom_id: quantidade }
-
-  function loadCupons(){
-    cupomsList.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Carregando...</p>';
-    supabase
-      .from("cupons")
-      .select("id, codigo, tipo_desconto, valor, aplica_todos_kits, kits_aplicaveis, limite_uso_por_telefone, ativo, criado_em")
-      .order("criado_em", { ascending: false })
-      .then(function(res){
-        if (res.error){
-          cupomsList.innerHTML = '<p style="color:var(--red); font-size:0.85rem;">Erro ao carregar: ' + res.error.message + '</p>';
-          return;
-        }
-        cupomsCache = res.data || [];
-        carregarContagemUsos();
-      });
-  }
-
-  function carregarContagemUsos(){
+      function carregarContagemUsos(){
     supabase
       .from("cupom_usos")
       .select("cupom_id")
@@ -410,8 +392,36 @@
             cupomUsosCache[u.cupom_id] = (cupomUsosCache[u.cupom_id] || 0) + 1;
           });
         }
+        renderCupomRanking();
         renderCupomsList();
       });
+  }
+
+  function renderCupomRanking(){
+    var el = document.getElementById("cupomRanking");
+    if (!el) return;
+
+    var ranking = cupomsCache
+      .map(function(c){ return { codigo: c.codigo, usos: cupomUsosCache[c.id] || 0 }; })
+      .filter(function(c){ return c.usos > 0; })
+      .sort(function(a, b){ return b.usos - a.usos; })
+      .slice(0, 3);
+
+    if (ranking.length === 0){ el.innerHTML = ""; return; }
+
+    var medalhas = ["🥇", "🥈", "🥉"];
+    el.innerHTML =
+      '<h3 style="font-size:0.95rem; color:var(--gold); margin-bottom:10px;">Cupons mais usados</h3>' +
+      '<div style="display:flex; flex-wrap:wrap; gap:10px;">' +
+        ranking.map(function(r, i){
+          return '<div class="kit-row" style="flex:1; min-width:160px;">' +
+            '<div class="kit-row-info">' +
+              '<h3>' + medalhas[i] + ' ' + r.codigo + '</h3>' +
+              '<span>' + r.usos + ' uso(s)</span>' +
+            '</div>' +
+          '</div>';
+        }).join("") +
+      '</div>';
   }
 
   function renderCupomsList(){
