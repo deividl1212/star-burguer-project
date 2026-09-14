@@ -444,11 +444,11 @@
 
     var medalhas = ["🥇", "🥈", "🥉"];
 
-    top3El.innerHTML =
+        top3El.innerHTML =
       '<h3 style="font-size:0.95rem; color:var(--gold); margin-bottom:10px;">Top 3 clientes</h3>' +
       '<div style="display:flex; flex-wrap:wrap; gap:10px;">' +
         ranking.map(function(r, i){
-          return '<div class="kit-row" style="flex:1; min-width:180px;">' +
+          return '<div class="kit-row" style="flex:1; min-width:180px; cursor:pointer;" data-top-tel="' + r.telefone + '">' +
             '<div class="kit-row-info">' +
               '<h3>' + medalhas[i] + ' ' + r.nome + '</h3>' +
               '<span>' + r.telefone + ' · ' + r.qtd + ' pedido(s)</span>' +
@@ -456,6 +456,14 @@
           '</div>';
         }).join("") +
       '</div>';
+
+    top3El.querySelectorAll("[data-top-tel]").forEach(function(card){
+      card.addEventListener("click", function(){
+        var tel = card.getAttribute("data-top-tel");
+        var pedidosDoCliente = todosPedidosCache.filter(function(p){ return p.telefone === tel; });
+        abrirDetalhePedidosCliente(tel, pedidosDoCliente);
+      });
+    });
   }
 
   function renderClientesAgrupados(pedidosFiltrados){
