@@ -477,22 +477,40 @@
       var pedidosDoCliente = porTelefone[tel];
       var nome = pedidosDoCliente[0].nome_cliente || "—";
       return (
-        '<div class="kit-row" data-tel="' + tel + '" style="cursor:pointer;">' +
+                '<div class="kit-row" data-tel="' + tel + '" style="cursor:pointer;">' +
           '<div class="kit-row-info">' +
             '<h3>' + nome + ' · ' + tel + '</h3>' +
             '<span>' + pedidosDoCliente.length + ' pedido(s) · último em ' + formatarData(pedidosDoCliente[0].criado_em) + '</span>' +
+          '</div>' +
+          '<div class="kit-row-actions">' +
+            '<button class="icon-btn danger" title="Excluir todos os pedidos deste telefone" data-delete-cliente="' + tel + '">🗑</button>' +
           '</div>' +
         '</div>'
       );
     }).join("");
 
-    pedidosList.querySelectorAll("[data-tel]").forEach(function(el){
+        pedidosList.querySelectorAll("[data-tel]").forEach(function(el){
       var tel = el.getAttribute("data-tel");
       el.addEventListener("click", function(){ abrirDetalhePedidosCliente(tel, porTelefone[tel]); });
     });
+    pedidosList.querySelectorAll("[data-delete-cliente]").forEach(function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        excluirPedidosDoTelefone(btn.getAttribute("data-delete-cliente"));
+      });
+    });
   }
 
-  function abrirDetalhePedidosCliente(tel, pedidosDoCliente){
+  function excluirPedidosDoTelefone(tel){
+    if (!confirm('Excluir TODOS os pedidos do telefone ' + tel + '? Essa ação não pode ser desfeita.')) return;
+    getClient().from("pedidos").delete().eq("telefone", tel).then(function(res){
+      if (res.error){ showMsgEm(pedidosMsg, "Erro ao excluir: " + res.error.message, true); return; }
+      showMsgEm(pedidosMsg, "Pedidos excluídos.");
+      loadPedidos();
+    });
+  }
+
+    function abrirDetalhePedidosCliente(tel, pedidosDoCliente){
     var itensHtml = pedidosDoCliente.map(function(p){
       var itensTxt = (p.itens || []).map(function(it){
         return it.qtd + "x " + it.kit + " (" + it.opcao + ")" + (it.adicionais && it.adicionais.length ? " + " + it.adicionais.join(", ") : "");
@@ -502,6 +520,9 @@
           '<div class="kit-row-info">' +
             '<h3>' + formatarData(p.criado_em) + ' · R$ ' + Number(p.valor_total).toFixed(2).replace(".", ",") + '</h3>' +
             '<span>' + itensTxt + '</span>' +
+          '</div>' +
+          '<div class="kit-row-actions">' +
+            '<button class="icon-btn danger" title="Excluir este pedido" data-delete-pedido="' + p.id + '">🗑</button>' +
           '</div>' +
         '</div>'
       );
@@ -515,6 +536,17 @@
       '</div>';
 
     document.getElementById("btnFecharDetalhePedidos").addEventListener("click", closeForm);
+    formCard.querySelectorAll("[data-delete-pedido]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        if (!confirm('Excluir este pedido específico?')) return;
+        getClient().from("pedidos").delete().eq("id", btn.getAttribute("data-delete-pedido")).then(function(res){
+          if (res.error){ showMsgEm(pedidosMsg, "Erro ao excluir: " + res.error.message, true); return; }
+          closeForm();
+          showMsgEm(pedidosMsg, "Pedido excluído.");
+          loadPedidos();
+        });
+      });
+    });
     formOverlay.classList.add("open");
   }
 
