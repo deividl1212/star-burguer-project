@@ -400,6 +400,7 @@
   }
 
         var cupomUsosDetalhado = {}; // { cupom_id: [{ telefone, usado_em }] }
+  var nomesPorTelefoneCache = {}; // { telefone: nome }
 
   function carregarContagemUsos(){
     supabase
@@ -416,8 +417,26 @@
             cupomUsosDetalhado[u.cupom_id].push(u);
           });
         }
-        renderCupomRanking();
-        renderCupomsList();
+
+        var telefonesUnicos = (res.data || []).map(function(u){ return u.telefone; })
+          .filter(function(t, i, arr){ return t && arr.indexOf(t) === i; });
+
+        if (telefonesUnicos.length === 0){
+          renderCupomRanking();
+          renderCupomsList();
+          return;
+        }
+
+        supabase.from("pedidos").select("telefone, nome_cliente").in("telefone", telefonesUnicos).then(function(resNomes){
+          nomesPorTelefoneCache = {};
+          if (!resNomes.error && resNomes.data){
+            resNomes.data.forEach(function(p){
+              if (!nomesPorTelefoneCache[p.telefone]) nomesPorTelefoneCache[p.telefone] = p.nome_cliente;
+            });
+          }
+          renderCupomRanking();
+          renderCupomsList();
+        });
       });
   }
 
@@ -456,11 +475,12 @@
 
   function abrirDetalheUsosCupom(cupomId, codigo){
     var usos = cupomUsosDetalhado[cupomId] || [];
-    var itensHtml = usos.length
+        var itensHtml = usos.length
       ? usos.map(function(u){
           var d = new Date(u.usado_em);
           var dataFmt = d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-          return '<div class="kit-row"><div class="kit-row-info"><h3>' + u.telefone + '</h3><span>' + dataFmt + '</span></div></div>';
+          var nome = nomesPorTelefoneCache[u.telefone] || "Nome não identificado";
+          return '<div class="kit-row"><div class="kit-row-info"><h3>' + nome + ' · ' + u.telefone + '</h3><span>' + dataFmt + '</span></div></div>';
         }).join("")
       : '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum uso registrado.</p>';
 
