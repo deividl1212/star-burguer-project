@@ -399,15 +399,21 @@
       });
   }
 
-      function carregarContagemUsos(){
+        var cupomUsosDetalhado = {}; // { cupom_id: [{ telefone, usado_em }] }
+
+  function carregarContagemUsos(){
     supabase
       .from("cupom_usos")
-      .select("cupom_id")
+      .select("cupom_id, telefone, usado_em")
+      .order("usado_em", { ascending: false })
       .then(function(res){
         cupomUsosCache = {};
+        cupomUsosDetalhado = {};
         if (!res.error && res.data){
           res.data.forEach(function(u){
             cupomUsosCache[u.cupom_id] = (cupomUsosCache[u.cupom_id] || 0) + 1;
+            if (!cupomUsosDetalhado[u.cupom_id]) cupomUsosDetalhado[u.cupom_id] = [];
+            cupomUsosDetalhado[u.cupom_id].push(u);
           });
         }
         renderCupomRanking();
@@ -419,29 +425,55 @@
     var el = document.getElementById("cupomRanking");
     if (!el) return;
 
-    var ranking = cupomsCache
-      .map(function(c){ return { codigo: c.codigo, usos: cupomUsosCache[c.id] || 0 }; })
+        var ranking = cupomsCache
+      .map(function(c){ return { id: c.id, codigo: c.codigo, usos: cupomUsosCache[c.id] || 0 }; })
       .filter(function(c){ return c.usos > 0; })
       .sort(function(a, b){ return b.usos - a.usos; })
       .slice(0, 3);
 
     if (ranking.length === 0){ el.innerHTML = ""; return; }
 
-    var medalhas = ["🥇", "🥈", "🥉"];
+        var medalhas = ["🥇", "🥈", "🥉"];
     el.innerHTML =
       '<h3 style="font-size:0.95rem; color:var(--gold); margin-bottom:10px;">Cupons mais usados</h3>' +
       '<div style="display:flex; flex-wrap:wrap; gap:10px;">' +
         ranking.map(function(r, i){
-          return '<div class="kit-row" style="flex:1; min-width:160px;">' +
+          return '<div class="kit-row" style="flex:1; min-width:160px; cursor:pointer;" data-cupom-id="' + r.id + '" data-cupom-codigo="' + r.codigo + '">' +
             '<div class="kit-row-info">' +
               '<h3>' + medalhas[i] + ' ' + r.codigo + '</h3>' +
-              '<span>' + r.usos + ' uso(s)</span>' +
+              '<span>' + r.usos + ' uso(s) · clique para ver quem usou</span>' +
             '</div>' +
           '</div>';
         }).join("") +
       '</div>';
+
+    el.querySelectorAll("[data-cupom-id]").forEach(function(card){
+      card.addEventListener("click", function(){
+        abrirDetalheUsosCupom(card.getAttribute("data-cupom-id"), card.getAttribute("data-cupom-codigo"));
+      });
+    });
   }
 
+  function abrirDetalheUsosCupom(cupomId, codigo){
+    var usos = cupomUsosDetalhado[cupomId] || [];
+    var itensHtml = usos.length
+      ? usos.map(function(u){
+          var d = new Date(u.usado_em);
+          var dataFmt = d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+          return '<div class="kit-row"><div class="kit-row-info"><h3>' + u.telefone + '</h3><span>' + dataFmt + '</span></div></div>';
+        }).join("")
+      : '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum uso registrado.</p>';
+
+    formCard.innerHTML =
+      '<h2>Quem usou "' + codigo + '"</h2>' +
+      '<div style="max-height:400px; overflow-y:auto; margin:16px 0;">' + itensHtml + '</div>' +
+      '<div class="form-actions">' +
+        '<button type="button" class="btn-cancel" id="btnFecharDetalheCupom">Fechar</button>' +
+      '</div>';
+
+    document.getElementById("btnFecharDetalheCupom").addEventListener("click", closeForm);
+    formOverlay.classList.add("open");
+  }
   function renderCupomsList(){
     if (cupomsCache.length === 0){
       cupomsList.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum cupom cadastrado ainda. Clique em "+ Novo cupom" para começar.</p>';
