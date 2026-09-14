@@ -376,10 +376,28 @@
   }
 
 /* ============ CUPONS ============ */
-  var TIPOS_DESCONTO = [
+    var TIPOS_DESCONTO = [
     { value: "percentual", label: "Percentual (%)" },
     { value: "fixo", label: "Valor fixo (R$)" }
   ];
+
+  var cupomUsosCache = {};
+
+  function loadCupons(){
+    cupomsList.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Carregando...</p>';
+    supabase
+      .from("cupons")
+      .select("id, codigo, tipo_desconto, valor, aplica_todos_kits, kits_aplicaveis, limite_uso_por_telefone, ativo, criado_em")
+      .order("criado_em", { ascending: false })
+      .then(function(res){
+        if (res.error){
+          cupomsList.innerHTML = '<p style="color:var(--red); font-size:0.85rem;">Erro ao carregar: ' + res.error.message + '</p>';
+          return;
+        }
+        cupomsCache = res.data || [];
+        carregarContagemUsos();
+      });
+  }
 
       function carregarContagemUsos(){
     supabase
