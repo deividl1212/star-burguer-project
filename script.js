@@ -536,7 +536,7 @@
         '</div>' +
             '</div>' +
       '<div class="sheet-footer">' +
-        '<button type="button" class="btn-share-kit" id="shareKitBtn">📤 Compartilhar</button>' +
+        '<button type="button" class="btn-share-kit" id="shareKitBtn"> Compartilhar Kit </button>' +
         '<button class="btn-primary" id="addToCartBtn">Adicionar · <span id="addToCartPrice" class="num"></span></button>' +
       '</div>';
 
@@ -1232,31 +1232,24 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     };
   }
 
-  function salvarRascunhoPedido(){
+    function salvarRascunhoPedido(){
     var client = getSupabaseClient();
     if (!client) return;
 
     var dados = montarPayloadPedido();
     if (dados.telefone.length < 10 || !dados.nome) return; // sem info suficiente ainda
 
-    var payload = {
-      telefone: dados.telefone,
-      nome_cliente: dados.nome,
-      itens: dados.itens,
-      valor_total: dados.valorTotal,
-      status: "pagamento_pendente"
-    };
-
-    if (pedidoDraftId){
-      client.from("pedidos").update(payload).eq("id", pedidoDraftId).then(function(res){
-        if (res.error){ console.warn("Erro ao atualizar rascunho:", res.error); }
-      });
-    } else {
-      client.from("pedidos").insert(payload).select().single().then(function(res){
-        if (res.error){ console.warn("Erro ao salvar rascunho:", res.error); return; }
-        pedidoDraftId = res.data.id;
-      });
-    }
+    client.rpc("criar_ou_atualizar_pedido", {
+      p_id: pedidoDraftId,
+      p_telefone: dados.telefone,
+      p_nome_cliente: dados.nome,
+      p_itens: dados.itens,
+      p_valor_total: dados.valorTotal,
+      p_status: "pagamento_pendente"
+    }).then(function(res){
+      if (res.error){ console.warn("Erro ao salvar rascunho:", res.error); return; }
+      pedidoDraftId = res.data;
+    });
   }
 
   function salvarPedidoNoBanco(nome, telefone){
@@ -1264,23 +1257,18 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     if (!client) return;
 
     var dados = montarPayloadPedido();
-    var payload = {
-      telefone: telefone.replace(/\D/g, ""),
-      nome_cliente: nome,
-      itens: dados.itens,
-      valor_total: dados.valorTotal,
-      status: "confirmado"
-    };
+    var telefoneDigits = telefone.replace(/\D/g, "");
 
-    if (pedidoDraftId){
-      client.from("pedidos").update(payload).eq("id", pedidoDraftId).then(function(res){
-        if (res.error){ console.warn("Erro ao confirmar pedido:", res.error); }
-      });
-    } else {
-      client.from("pedidos").insert(payload).then(function(res){
-        if (res.error){ console.warn("Erro ao salvar pedido no banco:", res.error); }
-      });
-    }
+    client.rpc("criar_ou_atualizar_pedido", {
+      p_id: pedidoDraftId,
+      p_telefone: telefoneDigits,
+      p_nome_cliente: nome,
+      p_itens: dados.itens,
+      p_valor_total: dados.valorTotal,
+      p_status: "confirmado"
+    }).then(function(res){
+      if (res.error){ console.warn("Erro ao salvar pedido no banco:", res.error); }
+    });
   }
 
   function trySendOrder(){
