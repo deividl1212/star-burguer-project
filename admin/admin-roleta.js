@@ -305,7 +305,7 @@
     return '<span style="display:inline-block; padding:3px 10px; border-radius:20px; font-size:0.72rem; font-weight:700; letter-spacing:0.3px; margin-right:8px; background:' + cor + '22; color:' + cor + '; border:1px solid ' + cor + ';">' + texto + '</span>';
   }
 
-  function renderHistoricoRoleta(giros){
+    function renderHistoricoRoleta(giros){
     if (giros.length === 0){
       roletaHistoricoList.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum giro gerado ainda.</p>';
       return;
@@ -328,9 +328,22 @@
             '<h3>' + badge + g.telefone + (g.nome_cliente ? " · " + g.nome_cliente : "") + '</h3>' +
             '<span>' + detalheTxt + (detalheTxt ? ' · ' : '') + 'gerado em ' + formatarData(g.criado_em) + (g.girado_em ? " · girou em " + formatarData(g.girado_em) : "") + '</span>' +
           '</div>' +
+          '<div class="kit-row-actions">' +
+            '<button class="icon-btn danger" title="Excluir este giro" data-delete-giro="' + g.id + '">🗑</button>' +
+          '</div>' +
         '</div>'
       );
     }).join("");
+
+    roletaHistoricoList.querySelectorAll("[data-delete-giro]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        if (!confirm("Excluir este giro? Essa ação não pode ser desfeita.")) return;
+        getClient().from("roleta_tokens").delete().eq("id", btn.getAttribute("data-delete-giro")).then(function(res){
+          if (res.error){ showMsgEm(roletaHistoricoMsg, "Erro ao excluir: " + res.error.message, true); return; }
+          loadHistoricoRoleta();
+        });
+      });
+    });
   }
   /* ============================================================
      PEDIDOS — histórico agrupado por telefone
