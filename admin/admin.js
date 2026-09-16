@@ -403,9 +403,9 @@
   var nomesPorTelefoneCache = {}; // { telefone: nome }
 
   function carregarContagemUsos(){
-    supabase
+        supabase
       .from("cupom_usos")
-      .select("cupom_id, telefone, usado_em")
+      .select("id, cupom_id, telefone, usado_em")
       .order("usado_em", { ascending: false })
       .then(function(res){
         cupomUsosCache = {};
@@ -475,12 +475,13 @@
 
   function abrirDetalheUsosCupom(cupomId, codigo){
     var usos = cupomUsosDetalhado[cupomId] || [];
-        var itensHtml = usos.length
+            var itensHtml = usos.length
       ? usos.map(function(u){
           var d = new Date(u.usado_em);
           var dataFmt = d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
           var nome = nomesPorTelefoneCache[u.telefone] || "Nome não identificado";
-          return '<div class="kit-row"><div class="kit-row-info"><h3>' + nome + ' · ' + u.telefone + '</h3><span>' + dataFmt + '</span></div></div>';
+          return '<div class="kit-row"><div class="kit-row-info"><h3>' + nome + ' · ' + u.telefone + '</h3><span>' + dataFmt + '</span></div>' +
+            '<div class="kit-row-actions"><button class="icon-btn danger" title="Excluir este uso" data-delete-uso="' + u.id + '">🗑</button></div></div>';
         }).join("")
       : '<p style="color:var(--cream-dim); font-size:0.85rem;">Nenhum uso registrado.</p>';
 
@@ -492,6 +493,16 @@
       '</div>';
 
     document.getElementById("btnFecharDetalheCupom").addEventListener("click", closeForm);
+    formCard.querySelectorAll("[data-delete-uso]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        if (!confirm("Excluir este registro de uso do cupom?")) return;
+        supabase.from("cupom_usos").delete().eq("id", btn.getAttribute("data-delete-uso")).then(function(res){
+          if (res.error){ showCupomMsg("Erro ao excluir: " + res.error.message, true); return; }
+          closeForm();
+          loadCupons();
+        });
+      });
+    });
     formOverlay.classList.add("open");
   }
   function renderCupomsList(){

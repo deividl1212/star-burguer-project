@@ -140,7 +140,8 @@
   var needsChange = null; // true = precisa troco, false = não precisa, null = não escolhido ainda
   var trocoPara = "";
     var appliedCoupon = null; // { cupom_id, codigo, tipo_desconto, valor, aplica_todos_kits, kits_aplicaveis }
-  var appliedPremioRoleta = null; // { premio_nome, premio_tipo, premio_valor }
+    var appliedPremioRoleta = null; // { premio_nome, premio_tipo, premio_valor }
+  var pedidoDraftId = null; // id do pedido salvo como rascunho, criado ao escolher forma de pagamento
   var selectedBairroId = null;
   var bairrosCache = [];
 
@@ -903,10 +904,11 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
       deliveryType = "retirada";
       atualizarTipoEntregaUI();
     });
-        sheet.querySelectorAll("[data-pay]").forEach(function(el){
+               sheet.querySelectorAll("[data-pay]").forEach(function(el){
       el.addEventListener("click", function(){
         paymentMethod = el.getAttribute("data-pay");
         atualizarPagamentoUI();
+        salvarRascunhoPedido();
       });
     });
 
@@ -1215,22 +1217,70 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     });
   }
 
-  function salvarPedidoNoBanco(nome, telefone){
-    var client = getSupabaseClient();
-    if (!client) return; // sem Supabase configurado, não bloqueia o pedido
-
+    function montarPayloadPedido(){
+    var nome = document.getElementById("inputNome") ? document.getElementById("inputNome").value.trim() : "";
+    var telefoneRaw = document.getElementById("inputTelefone") ? document.getElementById("inputTelefone").value.trim() : "";
+    var telefone = telefoneRaw.replace(/\D/g, "");
     var desconto = calcularDesconto();
     var taxa = taxaEntregaAtual();
     var valorTotal = cartTotal() - desconto + taxa;
+    return {
+      nome: nome,
+      telefone: telefone,
+      itens: montarItensPedido(),
+      valorTotal: valorTotal
+    };
+  }
 
-    client.from("pedidos").insert({
+  function salvarRascunhoPedido(){
+    var client = getSupabaseClient();
+    if (!client) return;
+
+    var dados = montarPayloadPedido();
+    if (dados.telefone.length < 10 || !dados.nome) return; // sem info suficiente ainda
+
+    var payload = {
+      telefone: dados.telefone,
+      nome_cliente: dados.nome,
+      itens: dados.itens,
+      valor_total: dados.valorTotal,
+      status: "pagamento_pendente"
+    };
+
+    if (pedidoDraftId){
+      client.from("pedidos").update(payload).eq("id", pedidoDraftId).then(function(res){
+        if (res.error){ console.warn("Erro ao atualizar rascunho:", res.error); }
+      });
+    } else {
+      client.from("pedidos").insert(payload).select().single().then(function(res){
+        if (res.error){ console.warn("Erro ao salvar rascunho:", res.error); return; }
+        pedidoDraftId = res.data.id;
+      });
+    }
+  }
+
+  function salvarPedidoNoBanco(nome, telefone){
+    var client = getSupabaseClient();
+    if (!client) return;
+
+    var dados = montarPayloadPedido();
+    var payload = {
       telefone: telefone.replace(/\D/g, ""),
       nome_cliente: nome,
-      itens: montarItensPedido(),
-      valor_total: valorTotal
-    }).then(function(res){
-      if (res.error){ console.warn("Erro ao salvar pedido no banco:", res.error); }
-    });
+      itens: dados.itens,
+      valor_total: dados.valorTotal,
+      status: "confirmado"
+    };
+
+    if (pedidoDraftId){
+      client.from("pedidos").update(payload).eq("id", pedidoDraftId).then(function(res){
+        if (res.error){ console.warn("Erro ao confirmar pedido:", res.error); }
+      });
+    } else {
+      client.from("pedidos").insert(payload).then(function(res){
+        if (res.error){ console.warn("Erro ao salvar pedido no banco:", res.error); }
+      });
+    }
   }
 
   function trySendOrder(){
@@ -1254,7 +1304,8 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
       setInvalid("fieldNumero", numero.length === 0);
       setInvalid("fieldBairro", !selectedBairroId);
     }
-    setInvalid("fieldTelefone", telefone.length < 8);
+        var telefoneDigits = telefone.replace(/\D/g, "");
+    setInvalid("fieldTelefone", telefoneDigits.length < 10);
     setInvalid("fieldPagamento", !paymentMethod);
     if (paymentMethod === "Dinheiro" && needsChange === true){
       setInvalid("fieldTrocoValor", !trocoPara || parseFloat(trocoPara) <= 0);
@@ -1312,9 +1363,10 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
 
         var eraRetirada = deliveryType === "retirada";
 
-        cart = [];
+               cart = [];
     appliedCoupon = null;
     appliedPremioRoleta = null;
+    pedidoDraftId = null;
     selectedBairroId = null;
     needsChange = null;
     trocoPara = "";
