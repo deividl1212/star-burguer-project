@@ -596,4 +596,63 @@
     formOverlay.classList.add("open");
   }
 
+  /* ============================================================
+     ALERTA DE PEDIDO NOVO (som + contador, em tempo real)
+     ============================================================ */
+  var novosPedidosCount = 0;
+  var sinoBadge = document.getElementById("sinoPedidosBadge");
+  var btnSinoPedidos = document.getElementById("btnSinoPedidos");
+
+  function atualizarBadgeSino(){
+    if (!sinoBadge) return;
+    if (novosPedidosCount > 0){
+      sinoBadge.textContent = novosPedidosCount;
+      sinoBadge.classList.remove("hidden");
+    } else {
+      sinoBadge.classList.add("hidden");
+    }
+  }
+
+  function tocarAlertaPedido(){
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      function bip(freq, atraso){
+        setTimeout(function(){
+          var osc = ctx.createOscillator();
+          var gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.001, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.35);
+        }, atraso);
+      }
+      bip(880, 0);
+      bip(1100, 250);
+    } catch(e){
+      console.warn("Não foi possível tocar o alerta sonoro:", e);
+    }
+  }
+
+  if (btnSinoPedidos){
+    btnSinoPedidos.addEventListener("click", function(){
+      novosPedidosCount = 0;
+      atualizarBadgeSino();
+      ativarAba("tabPedidos");
+      loadPedidos();
+    });
+  }
+
+  getClient()
+    .channel("pedidos-novos")
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "pedidos" }, function(payload){
+      novosPedidosCount++;
+      atualizarBadgeSino();
+      tocarAlertaPedido();
+    })
+    .subscribe();
+
 })();
