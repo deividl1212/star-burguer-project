@@ -341,11 +341,11 @@
 
     var filtroPedidosAtual = "todos";
 
-  function loadPedidos(){
+    function loadPedidos(){
     pedidosList.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Carregando...</p>';
     getClient()
       .from("pedidos")
-      .select("id, telefone, nome_cliente, itens, valor_total, criado_em")
+      .select("id, telefone, nome_cliente, itens, valor_total, criado_em, status")
       .order("criado_em", { ascending: false })
       .limit(500)
       .then(function(res){
@@ -481,13 +481,15 @@
       return new Date(porTelefone[b][0].criado_em) - new Date(porTelefone[a][0].criado_em);
     });
 
-    pedidosList.innerHTML = telefones.map(function(tel){
+        pedidosList.innerHTML = telefones.map(function(tel){
       var pedidosDoCliente = porTelefone[tel];
       var nome = pedidosDoCliente[0].nome_cliente || "—";
+      var temPendente = pedidosDoCliente.some(function(p){ return p.status === "pagamento_pendente"; });
+      var alerta = temPendente ? '<span style="display:inline-block; padding:2px 8px; border-radius:20px; font-size:0.7rem; font-weight:700; margin-left:8px; background:#D4AF3722; color:#D4AF37; border:1px solid #D4AF37;">PAGAMENTO PENDENTE</span>' : '';
       return (
-                '<div class="kit-row" data-tel="' + tel + '" style="cursor:pointer;">' +
+        '<div class="kit-row" data-tel="' + tel + '" style="cursor:pointer;">' +
           '<div class="kit-row-info">' +
-            '<h3>' + nome + ' · ' + tel + '</h3>' +
+            '<h3>' + nome + ' · ' + tel + alerta + '</h3>' +
             '<span>' + pedidosDoCliente.length + ' pedido(s) · último em ' + formatarData(pedidosDoCliente[0].criado_em) + '</span>' +
           '</div>' +
           '<div class="kit-row-actions">' +
@@ -518,16 +520,29 @@
     });
   }
 
-    function abrirDetalhePedidosCliente(tel, pedidosDoCliente){
+      var STATUS_PEDIDO_OPCOES = [
+    { value: "pagamento_pendente", label: "⏳ Pagamento pendente" },
+    { value: "confirmado", label: "✅ Confirmado" },
+    { value: "cancelado", label: "❌ Cancelado" }
+  ];
+
+  function abrirDetalhePedidosCliente(tel, pedidosDoCliente){
     var itensHtml = pedidosDoCliente.map(function(p){
       var itensTxt = (p.itens || []).map(function(it){
         return it.qtd + "x " + it.kit + " (" + it.opcao + ")" + (it.adicionais && it.adicionais.length ? " + " + it.adicionais.join(", ") : "");
       }).join("<br>");
+      var statusAtual = p.status || "confirmado";
+      var seletorStatus = '<select class="seletor-status-pedido" data-pedido-id="' + p.id + '" style="margin-top:6px; font-size:0.8rem; padding:4px 8px; border-radius:8px; background:var(--fundo-carta,#161110); color:var(--branco,#F5EFE4); border:1px solid var(--gold);">' +
+        STATUS_PEDIDO_OPCOES.map(function(o){
+          return '<option value="' + o.value + '" ' + (o.value === statusAtual ? "selected" : "") + '>' + o.label + '</option>';
+        }).join("") +
+        '</select>';
       return (
         '<div class="kit-row">' +
           '<div class="kit-row-info">' +
             '<h3>' + formatarData(p.criado_em) + ' · R$ ' + Number(p.valor_total).toFixed(2).replace(".", ",") + '</h3>' +
             '<span>' + itensTxt + '</span>' +
+            seletorStatus +
           '</div>' +
           '<div class="kit-row-actions">' +
             '<button class="icon-btn danger" title="Excluir este pedido" data-delete-pedido="' + p.id + '">🗑</button>' +
@@ -543,7 +558,17 @@
         '<button type="button" class="btn-cancel" id="btnFecharDetalhePedidos">Fechar</button>' +
       '</div>';
 
-    document.getElementById("btnFecharDetalhePedidos").addEventListener("click", closeForm);
+        document.getElementById("btnFecharDetalhePedidos").addEventListener("click", closeForm);
+    formCard.querySelectorAll(".seletor-status-pedido").forEach(function(sel){
+      sel.addEventListener("change", function(){
+        var novoStatus = this.value;
+        var pedidoId = this.getAttribute("data-pedido-id");
+        getClient().from("pedidos").update({ status: novoStatus }).eq("id", pedidoId).then(function(res){
+          if (res.error){ showMsgEm(pedidosMsg, "Erro ao mudar status: " + res.error.message, true); return; }
+          loadPedidos();
+        });
+      });
+    });
     formCard.querySelectorAll("[data-delete-pedido]").forEach(function(btn){
       btn.addEventListener("click", function(){
         if (!confirm('Excluir este pedido específico?')) return;
