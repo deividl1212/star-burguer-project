@@ -1,0 +1,24 @@
+{
+  "name": "star-burguer-project",
+  "version": "1.0.0",
+  "description": "``` star-burguer-project/ ├── config.js          → único lugar com as credenciais (WhatsApp, Instagram, Supabase) ├── index.html          → site público (cardápio, carrinho, checkout) ├── styles.css ├── script.js ├── admin/ │   ├── index.html      → painel administrativo (login + edição de kits) │   ├── admin.css │   └── admin.js └── supabase/     └── schema.sql       → script para criar as tabelas no Supabase ```",
+  "main": "config.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deividl1212/star-burguer-project.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/deividl1212/star-burguer-project/issues"
+  },
+  "homepage": "https://github.com/deividl1212/star-burguer-project#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}

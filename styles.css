@@ -456,11 +456,12 @@
   .field.invalid input, .field.invalid textarea{border-color:var(--red);}
   .field.invalid .error-text{display:block;}
 
-  .toast{
+   .toast{
     position:fixed; left:50%; bottom:100px; transform:translateX(-50%) translateY(20px);
     background:var(--gold); color:#1a1a1a; font-weight:700; font-size:0.85rem;
     padding:10px 20px; border-radius:var(--radius-pill);
     opacity:0; transition:all 0.25s ease; z-index:60; white-space:nowrap;
+    pointer-events:none;
   }
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
