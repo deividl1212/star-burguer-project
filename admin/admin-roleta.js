@@ -283,7 +283,7 @@
     roletaHistoricoList.innerHTML = '<p style="color:var(--cream-dim); font-size:0.85rem;">Carregando...</p>';
     getClient()
       .from("roleta_tokens")
-            .select("id, telefone, nome_cliente, status, criado_em, girado_em, resgatado, roleta_premios ( nome )")
+                 .select("id, telefone, nome_cliente, status, criado_em, girado_em, resgatado, expira_em, roleta_premios ( nome )")
       .order("criado_em", { ascending: false })
       .limit(200)
       .then(function(res){
@@ -315,8 +315,11 @@
       if (g.status === "disponivel"){
         badge = badgeStatus("AGUARDANDO GIRO", "#A99B8C");
         detalheTxt = "";
-      } else if (g.resgatado){
+            } else if (g.resgatado){
         badge = badgeStatus("USADO", "#5C8A3A");
+        detalheTxt = (g.roleta_premios ? g.roleta_premios.nome : "prêmio");
+      } else if (g.expira_em && new Date(g.expira_em) < new Date()){
+        badge = badgeStatus("EXPIRADO", "#8A8A8A");
         detalheTxt = (g.roleta_premios ? g.roleta_premios.nome : "prêmio");
       } else {
         badge = badgeStatus("PENDENTE", "#D4AF37");
@@ -654,5 +657,78 @@
       tocarAlertaPedido();
     })
     .subscribe();
+
+  /* ============================================================
+     PRÊMIOS DA ROLETA A VENCER (aba Cupons)
+     ============================================================ */
+  var premiosAVencerEl = document.getElementById("premiosAVencer");
+
+  function diasRestantes(expiraEmIso){
+    return Math.ceil((new Date(expiraEmIso).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+  }
+
+  function loadPremiosAVencer(){
+    if (!premiosAVencerEl) return;
+    getClient()
+      .from("roleta_tokens")
+      .select("id, telefone, nome_cliente, expira_em, roleta_premios ( nome )")
+      .eq("status", "girado")
+      .eq("resgatado", false)
+      .gt("expira_em", new Date().toISOString())
+      .order("expira_em", { ascending: true })
+      .then(function(res){
+        if (res.error){
+          premiosAVencerEl.innerHTML = '<p style="color:var(--red); font-size:0.85rem;">Erro ao carregar prêmios a vencer: ' + res.error.message + '</p>';
+          return;
+        }
+        renderPremiosAVencer(res.data || []);
+      });
+  }
+
+  function renderPremiosAVencer(lista){
+    if (lista.length === 0){
+      premiosAVencerEl.innerHTML = "";
+      return;
+    }
+    premiosAVencerEl.innerHTML =
+      '<h3 style="font-size:0.95rem; color:var(--gold); margin-bottom:10px;">Prêmios da roleta a vencer</h3>' +
+      '<div class="kits-list">' +
+        lista.map(function(t){
+          var dias = diasRestantes(t.expira_em);
+          var cor = dias <= 3 ? "#D6432E" : (dias <= 7 ? "#D4AF37" : "#A99B8C");
+          var premio = t.roleta_premios ? t.roleta_premios.nome : "prêmio";
+          var nome = t.nome_cliente || "Cliente";
+          return (
+            '<div class="kit-row">' +
+              '<div class="kit-row-info">' +
+                '<h3>' + badgeStatus(dias + (dias === 1 ? " DIA" : " DIAS"), cor) + nome + ' · ' + t.telefone + '</h3>' +
+                '<span>' + premio + ' · vence em ' + formatarData(t.expira_em) + '</span>' +
+              '</div>' +
+              '<div class="kit-row-actions">' +
+                '<button class="icon-btn" title="Avisar cliente pelo WhatsApp" data-avisar-premio="' + t.id + '">📤</button>' +
+              '</div>' +
+            '</div>'
+          );
+        }).join("") +
+      '</div>';
+
+    premiosAVencerEl.querySelectorAll("[data-avisar-premio]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var token = lista.find(function(x){ return x.id === btn.getAttribute("data-avisar-premio"); });
+        if (token) avisarClientePremio(token);
+      });
+    });
+  }
+
+  function avisarClientePremio(t){
+    var nome = t.nome_cliente || "";
+    var premio = t.roleta_premios ? t.roleta_premios.nome : "um prêmio";
+    var validade = new Date(t.expira_em).toLocaleDateString("pt-BR");
+    var texto =
+      "Olá" + (nome ? ", " + nome : "") + "! 🎁 Você tem um prêmio da roleta da Star Burguer esperando por você: *" + premio + "*.\n\n" +
+      "⏰ Ele vale até " + validade + ". É só fazer seu pedido usando este mesmo telefone que o prêmio é aplicado automaticamente.\n\n" +
+      "📲 Peça aqui: " + window.location.origin;
+    window.open("https://wa.me/55" + t.telefone + "?text=" + encodeURIComponent(texto), "_blank");
+  }
 
 })();

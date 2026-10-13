@@ -46,9 +46,9 @@ test.describe('Site de pedidos - Star Burguer', () => {
     await adicionarPrimeiroKitAoCarrinho(page);
     await irParaCheckout(page);
 
-    await page.getByText('Retirada').click();
-    await page.getByText('Dinheiro').click();
-    await page.getByText('Não').click();
+        await page.locator('#toggleRetirada').click();
+    await page.locator('[data-pay="Dinheiro"]').click();
+    await page.locator('#toggleTrocoNao').click();
     await page.fill('#inputData', new Date().toISOString().slice(0, 10));
     await page.fill('#inputHora', '19:00');
     await page.getByText('Enviar pedido pelo WhatsApp').click();
