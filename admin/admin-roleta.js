@@ -71,7 +71,8 @@
       ativarAba(item.tabId);
       if (item.tabId === "tabRoletaPremios") loadPremiosRoleta();
             if (item.tabId === "tabRoletaHistorico") loadHistoricoRoleta();
-      if (item.tabId === "tabPedidos") loadPedidos();
+            if (item.tabId === "tabPedidos") loadPedidos();
+      if (item.tabId === "tabCupons") loadPremiosAVencer();
     });
   });
 
