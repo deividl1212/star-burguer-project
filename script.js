@@ -140,7 +140,8 @@
   var needsChange = null; // true = precisa troco, false = não precisa, null = não escolhido ainda
   var trocoPara = "";
     var appliedCoupon = null; // { cupom_id, codigo, tipo_desconto, valor, aplica_todos_kits, kits_aplicaveis }
-    var appliedPremioRoleta = null; // { premio_nome, premio_tipo, premio_valor }
+      var appliedPremioRoleta = null; // { premio_nome, premio_tipo, premio_valor }
+  var premioLink = null; // prêmio aplicado pelo link: { token, telefone, nome }
   var pedidoDraftId = null; // id do pedido salvo como rascunho, criado ao escolher forma de pagamento
   var selectedBairroId = null;
   var bairrosCache = [];
@@ -927,7 +928,12 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
         renderCupomField();
     renderPremioRoletaBanner();
 
-    var inputTelefoneEl = document.getElementById("inputTelefone");
+        var inputTelefoneEl = document.getElementById("inputTelefone");
+    if (premioLink){
+      if (inputTelefoneEl && premioLink.telefone) inputTelefoneEl.value = premioLink.telefone;
+      var inputNomeEl = document.getElementById("inputNome");
+      if (inputNomeEl && premioLink.nome) inputNomeEl.value = premioLink.nome;
+    }
     if (inputTelefoneEl){
       inputTelefoneEl.addEventListener("blur", function(){
         verificarPremioRoleta(this.value);
@@ -1011,7 +1017,42 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     }
   }
 
-    function verificarPremioRoleta(telefoneRaw){
+    var UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  function aplicarPremioDoLink(){
+    if (!supabaseConfigurado()) return;
+    var token = new URLSearchParams(window.location.search).get("premio");
+    if (!token || !UUID_REGEX.test(token)) return;
+    var client = getSupabaseClient();
+    if (!client) return;
+
+    client.rpc("buscar_premio_por_token", { p_token: token }).then(function(res){
+      var info = res.data && res.data[0];
+      if (res.error || !info || !info.valido){
+        showToast((info && info.motivo) ? info.motivo : "Não foi possível aplicar o prêmio deste link.");
+        return;
+      }
+      premioLink = { token: token, telefone: info.cliente_telefone, nome: info.cliente_nome };
+      appliedPremioRoleta = { premio_nome: info.premio_nome, premio_tipo: info.premio_tipo, premio_valor: info.premio_valor };
+      appliedCoupon = null;
+      mostrarAvisoPremioDoLink(info.premio_nome);
+      goToCatalog();
+      showToast("🎉 Prêmio aplicado!");
+    });
+  }
+
+  function mostrarAvisoPremioDoLink(nomePremio){
+    var lista = document.getElementById("menuList");
+    if (!lista || !lista.parentNode || document.getElementById("avisoPremioLink")) return;
+    var aviso = document.createElement("div");
+    aviso.id = "avisoPremioLink";
+    aviso.style.cssText = "background:rgba(212,175,55,0.12); border:2px solid var(--gold); border-radius:12px; padding:12px 16px; font-size:0.88rem; font-weight:600; margin-bottom:14px;";
+    aviso.textContent = "🎉 Seu prêmio está aplicado: " + nomePremio + ". Escolha seus kits e finalize o pedido.";
+    lista.parentNode.insertBefore(aviso, lista);
+  }
+
+  function verificarPremioRoleta(telefoneRaw){
+    if (premioLink) return; // prêmio já aplicado pelo link, não depende do telefone digitado
     var telefone = telefoneRaw.replace(/\D/g, "");
     if (telefone.length < 10) return;
     var client = getSupabaseClient();
@@ -1327,7 +1368,10 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     if (appliedPremioRoleta){
       var clientPremio = getSupabaseClient();
       if (clientPremio){
-        clientPremio.rpc("marcar_premio_usado", { p_telefone: telefone.replace(/\D/g, "") }).then(function(res){
+               var chamadaPremio = premioLink
+          ? clientPremio.rpc("marcar_premio_usado_por_token", { p_token: premioLink.token })
+          : clientPremio.rpc("marcar_premio_usado", { p_telefone: telefone.replace(/\D/g, "") });
+        chamadaPremio.then(function(res){
           if (res.error){ console.warn("Erro ao marcar prêmio como usado:", res.error); }
         });
       }
@@ -1360,6 +1404,7 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     trocoPara = "";
     renderFloatingCart();
     closeCheckout();
+        premioLink = null;
     showToast("Pedido enviado! Confirme no WhatsApp.");
 
     if (eraRetirada){
@@ -1518,7 +1563,8 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
   });
 
   renderFloatingCart();
-  spawnEmbers("embersWelcome", 16);
+    spawnEmbers("embersWelcome", 16);
+  aplicarPremioDoLink();
   spawnEmbers("embers", 14);
 
   // Mostra o cardápio imediatamente com os dados locais (fallback) e,
