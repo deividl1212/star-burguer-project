@@ -52,7 +52,8 @@
     { tabId: "tabRoletaGiros", sectionEl: roletaGirosSection },
     { tabId: "tabRoletaPremios", sectionEl: roletaPremiosSection },
         { tabId: "tabRoletaHistorico", sectionEl: roletaHistoricoSection },
-    { tabId: "tabPedidos", sectionEl: pedidosSection }
+        { tabId: "tabPedidos", sectionEl: pedidosSection },
+    { tabId: "tabBanners", sectionEl: document.getElementById("bannersSection") }
   ];
 
   function ativarAba(tabIdAlvo){
@@ -71,7 +72,8 @@
       ativarAba(item.tabId);
       if (item.tabId === "tabRoletaPremios") loadPremiosRoleta();
             if (item.tabId === "tabRoletaHistorico") loadHistoricoRoleta();
-            if (item.tabId === "tabPedidos") loadPedidos();
+                  if (item.tabId === "tabPedidos") loadPedidos();
+      if (item.tabId === "tabBanners" && window.carregarBanners) window.carregarBanners();
       if (item.tabId === "tabCupons") loadPremiosAVencer();
     });
   });

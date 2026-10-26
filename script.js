@@ -1538,6 +1538,125 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     }
   }
 
+    /* ============ CARROSSEL DE BANNERS (promoções) ============ */
+  function carregarBanners(){
+    if (!supabaseConfigurado()) return;
+    var client = getSupabaseClient();
+    if (!client) return;
+
+    client.rpc("listar_banners_ativos").then(function(res){
+      if (res.error || !res.data || !res.data.length) return;
+      renderBanners(res.data);
+    });
+  }
+
+  function abrirLinkDoBanner(b){
+    if (b.link_tipo === "kit" && b.link_valor && findKit(b.link_valor)){
+      openProduct(b.link_valor);
+    } else if (b.link_tipo === "whatsapp"){
+      var texto = b.link_valor ? "?text=" + encodeURIComponent(b.link_valor) : "";
+      window.open("https://wa.me/" + WHATSAPP_NUMBER + texto, "_blank");
+    } else if (b.link_tipo === "url" && /^https:\/\//i.test(b.link_valor || "")){
+      window.open(b.link_valor, "_blank", "noopener");
+    }
+  }
+
+  function renderBanners(lista){
+    var menu = document.getElementById("menuList");
+    var main = menu ? menu.closest("main") : null;
+    if (!main || document.getElementById("bannerCarousel")) return;
+
+    var wrap = document.createElement("section");
+    wrap.id = "bannerCarousel";
+    wrap.className = "banner-carousel";
+    wrap.setAttribute("aria-roledescription", "carrossel");
+    wrap.setAttribute("aria-label", "Promoções");
+
+    var track = document.createElement("div");
+    track.className = "banner-track";
+    wrap.appendChild(track);
+
+    lista.forEach(function(b, i){
+      var slide = document.createElement("div");
+      slide.className = "banner-slide";
+
+      var img = document.createElement("img");
+      img.src = b.imagem_url;
+      img.alt = b.titulo || "Promoção";
+      img.width = 1200;
+      img.height = 600;
+      img.setAttribute("decoding", "async");
+      if (i > 0) img.setAttribute("loading", "lazy");
+
+      if (b.link_tipo && b.link_tipo !== "nenhum"){
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.appendChild(img);
+        btn.addEventListener("click", function(){ abrirLinkDoBanner(b); });
+        slide.appendChild(btn);
+      } else {
+        slide.appendChild(img);
+      }
+      track.appendChild(slide);
+    });
+
+    function irParaBanner(i){
+      track.scrollTo({ left: i * track.clientWidth, behavior: "smooth" });
+    }
+
+    var dots = [];
+    if (lista.length > 1){
+      var dotsWrap = document.createElement("div");
+      dotsWrap.className = "banner-dots";
+      lista.forEach(function(_, i){
+        var d = document.createElement("button");
+        d.type = "button";
+        d.setAttribute("aria-label", "Ir para a promoção " + (i + 1));
+        d.addEventListener("click", function(){ irParaBanner(i); });
+        dotsWrap.appendChild(d);
+        dots.push(d);
+      });
+      dots[0].classList.add("active");
+      wrap.appendChild(dotsWrap);
+    }
+
+    main.insertBefore(wrap, main.firstChild);
+
+    function marcarPonto(){
+      if (!track.clientWidth) return;
+      var atual = Math.round(track.scrollLeft / track.clientWidth);
+      dots.forEach(function(d, k){ d.classList.toggle("active", k === atual); });
+    }
+    track.addEventListener("scroll", function(){ window.requestAnimationFrame(marcarPonto); });
+
+    var reduzMovimento = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var timer = null;
+
+    function proximo(){
+      if (!track.clientWidth) return;
+      var atual = Math.round(track.scrollLeft / track.clientWidth);
+      irParaBanner((atual + 1) % lista.length);
+    }
+    function iniciar(){
+      if (lista.length > 1 && !reduzMovimento && !timer) timer = setInterval(proximo, 5000);
+    }
+    function parar(){
+      clearInterval(timer);
+      timer = null;
+    }
+
+    wrap.addEventListener("mouseenter", parar);
+    wrap.addEventListener("mouseleave", iniciar);
+    wrap.addEventListener("touchstart", parar, { passive: true });
+    wrap.addEventListener("touchend", iniciar, { passive: true });
+    wrap.addEventListener("focusin", parar);
+    wrap.addEventListener("focusout", iniciar);
+    document.addEventListener("visibilitychange", function(){
+      if (document.hidden) parar(); else iniciar();
+    });
+    iniciar();
+  }
+
   /* ============ INIT ============ */
   document.getElementById("btnPedirWelcome").addEventListener("click", goToCatalog);
   document.getElementById("btnSobreWelcome").addEventListener("click", openSobre);
@@ -1563,7 +1682,8 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
   });
 
   renderFloatingCart();
-    spawnEmbers("embersWelcome", 16);
+      spawnEmbers("embersWelcome", 16);
+  carregarBanners();
   aplicarPremioDoLink();
   spawnEmbers("embers", 14);
 

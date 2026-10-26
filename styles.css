@@ -902,3 +902,24 @@
   margin-bottom:10px;
 }
 .btn-share-kit:hover{ border-color:var(--gold); color:var(--gold); }
+/* ---------- Carrossel de banners (promoções) ---------- */
+.banner-carousel{ margin:0 0 22px; }
+.banner-track{
+  display:flex; overflow-x:auto;
+  scroll-snap-type:x mandatory; scroll-behavior:smooth;
+  -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  border-radius:16px; border:1px solid rgba(212,175,55,0.35);
+}
+.banner-track::-webkit-scrollbar{ display:none; }
+.banner-slide{ flex:0 0 100%; scroll-snap-align:start; }
+.banner-slide img{ display:block; width:100%; height:auto; aspect-ratio:2 / 1; object-fit:cover; background:#1a1411; }
+.banner-slide button{ all:unset; display:block; width:100%; cursor:pointer; }
+.banner-slide button:focus-visible{ outline:2px solid var(--gold, #D4AF37); outline-offset:-3px; }
+.banner-dots{ display:flex; justify-content:center; gap:8px; margin-top:10px; }
+.banner-dots button{ width:8px; height:8px; padding:0; border:0; border-radius:8px; background:rgba(255,255,255,0.28); cursor:pointer; transition:width .2s ease, background .2s ease; }
+.banner-dots button.active{ width:22px; background:var(--gold, #D4AF37); }
+.banner-dots button:focus-visible{ outline:2px solid var(--gold, #D4AF37); outline-offset:2px; }
+@media (prefers-reduced-motion: reduce){
+  .banner-track{ scroll-behavior:auto; }
+  .banner-dots button{ transition:none; }
+}

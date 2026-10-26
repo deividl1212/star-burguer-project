@@ -50,6 +50,7 @@
   <main class="admin-main">
     <div class="admin-tabs">
       <button class="admin-tab" id="tabPedidos">Pedidos</button>
+      <button class="admin-tab" id="tabBanners">Banners</button>
       <button class="admin-tab active" id="tabKits">Kits</button>
       <button class="admin-tab" id="tabCupons">Cupons</button>
       <button class="admin-tab" id="tabPromocoes">Promoção</button>
@@ -76,7 +77,7 @@
       </div>
       <p class="admin-msg" id="cupomMsgAdmin"></p>
             <div id="premiosAVencer" style="margin-bottom:20px;"></div>
-            if (item.tabId === "tabPedidos") loadPedidos();
+          
             <div id="premiosAVencer" style="margin-bottom:20px;"></div>
       <div id="cupomRanking" style="margin-bottom:20px;"></div>
       <div id="cupomsList" class="kits-list"></div>
@@ -174,6 +175,15 @@
       <div id="pedidosTopKits" style="margin-bottom:20px;"></div>
       <div id="pedidosList" class="kits-list"></div>
     </div>
+      <div id="bannersSection" class="hidden">
+      <div class="admin-toolbar">
+        <h2>Banners de promoção</h2>
+        <button class="btn-primary btn-sm" id="btnNovoBanner">+ Novo banner</button>
+      </div>
+      <p class="admin-msg" id="bannersMsg"></p>
+      <p class="hint" style="margin:0 0 12px;">Aparecem no topo do cardápio, em carrossel. Tamanho ideal da arte: 1200 x 600 px (proporção 2:1), com o texto importante no centro.</p>
+      <div id="bannersList" class="kits-list"></div>
+    </div>
   </main>
 </div>
 
@@ -186,5 +196,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/admin/admin.js"></script>
 <script src="/admin/admin-roleta.js"></script>
+<script src="/admin/admin-banners.js"></script>
 </body>
 </html>
