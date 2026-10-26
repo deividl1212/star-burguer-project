@@ -141,7 +141,8 @@
   var trocoPara = "";
     var appliedCoupon = null; // { cupom_id, codigo, tipo_desconto, valor, aplica_todos_kits, kits_aplicaveis }
       var appliedPremioRoleta = null; // { premio_nome, premio_tipo, premio_valor }
-  var premioLink = null; // prêmio aplicado pelo link: { token, telefone, nome }
+    var premioLink = null; // prêmio aplicado pelo link: { token, telefone, nome }
+  var premioGuardado = null; // prêmio da roleta guardado quando o cliente escolhe um cupom comum
   var pedidoDraftId = null; // id do pedido salvo como rascunho, criado ao escolher forma de pagamento
   var selectedBairroId = null;
   var bairrosCache = [];
@@ -989,19 +990,22 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     renderCheckoutFooter();
   }
 
-    function renderCupomField(){
+  /* ============ CUPOM COMUM x PRÊMIO DA ROLETA ============
+     Só um benefício vale por pedido. O prêmio da roleta entra sozinho (pelo telefone ou
+     pelo link do admin), mas o cliente pode trocar por um cupom comum: nesse caso o
+     prêmio fica guardado (premioGuardado) e continua pendente para o próximo pedido. */
+  function renderCupomField(){
     var wrap = document.getElementById("cupomFieldWrap");
     if (!wrap) return;
-    var bloqueadoPorPremio = !!appliedPremioRoleta;
     wrap.innerHTML =
       '<label>Cupom de desconto (opcional)</label>' +
       '<div class="cupom-row">' +
-        '<input type="text" id="inputCupom" placeholder="Digite o código" value="' + (appliedCoupon ? appliedCoupon.codigo : "") + '" ' + (appliedCoupon || bloqueadoPorPremio ? "disabled" : "") + '>' +
+        '<input type="text" id="inputCupom" placeholder="Digite o código" value="' + (appliedCoupon ? appliedCoupon.codigo : "") + '" ' + (appliedCoupon ? "disabled" : "") + '>' +
         (appliedCoupon
           ? '<button type="button" class="btn-cupom-remove" id="btnRemoverCupom">Remover</button>'
-          : '<button type="button" class="btn-cupom-aplicar" id="btnAplicarCupom" ' + (bloqueadoPorPremio ? "disabled" : "") + '>Aplicar</button>') +
+          : '<button type="button" class="btn-cupom-aplicar" id="btnAplicarCupom">Aplicar</button>') +
       '</div>' +
-      '<span class="cupom-msg" id="cupomMsg" style="color:' + (appliedCoupon ? "var(--gold)" : "var(--red)") + ';">' + (appliedCoupon ? "Cupom aplicado: -" + (appliedCoupon.tipo_desconto === "percentual" ? appliedCoupon.valor + "%" : brl(appliedCoupon.valor)) : (bloqueadoPorPremio ? "Indisponível: você já tem um prêmio da roleta aplicado." : "")) + '</span>';
+      '<span class="cupom-msg" id="cupomMsg" style="color:' + (appliedCoupon ? "var(--gold)" : "var(--red)") + ';">' + (appliedCoupon ? "Cupom aplicado: -" + (appliedCoupon.tipo_desconto === "percentual" ? appliedCoupon.valor + "%" : brl(appliedCoupon.valor)) : "") + '</span>';
 
     var btnAplicarCupom = document.getElementById("btnAplicarCupom");
     if (btnAplicarCupom){
@@ -1011,13 +1015,18 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     if (btnRemoverCupom){
       btnRemoverCupom.addEventListener("click", function(){
         appliedCoupon = null;
+        if (premioGuardado){
+          appliedPremioRoleta = premioGuardado; // sem cupom, o prêmio guardado volta
+          premioGuardado = null;
+        }
+        renderPremioRoletaBanner();
         renderCupomField();
         renderCheckoutFooter();
       });
     }
   }
 
-    var UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  var UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   function aplicarPremioDoLink(){
     if (!supabaseConfigurado()) return;
@@ -1035,6 +1044,7 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
       premioLink = { token: token, telefone: info.cliente_telefone, nome: info.cliente_nome };
       appliedPremioRoleta = { premio_nome: info.premio_nome, premio_tipo: info.premio_tipo, premio_valor: info.premio_valor };
       appliedCoupon = null;
+      premioGuardado = null;
       mostrarAvisoPremioDoLink(info.premio_nome);
       goToCatalog();
       showToast("🎉 Prêmio aplicado!");
@@ -1052,22 +1062,23 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
   }
 
   function verificarPremioRoleta(telefoneRaw){
-    if (premioLink) return; // prêmio já aplicado pelo link, não depende do telefone digitado
+    if (premioLink) return; // prêmio já carregado pelo link, não depende do telefone digitado
     var telefone = telefoneRaw.replace(/\D/g, "");
     if (telefone.length < 10) return;
     var client = getSupabaseClient();
     if (!client) return;
 
     client.rpc("verificar_premio_pendente", { p_telefone: telefone }).then(function(res){
-      if (res.error || !res.data || !res.data.length || !res.data[0].tem_premio){
+      var achou = !res.error && res.data && res.data.length && res.data[0].tem_premio;
+      if (!achou){
         appliedPremioRoleta = null;
-        renderPremioRoletaBanner();
-        renderCupomField();
-        renderCheckoutFooter();
-        return;
+        premioGuardado = null;
+      } else if (appliedCoupon){
+        premioGuardado = res.data[0]; // o cliente já escolheu um cupom: o prêmio fica guardado
+      } else {
+        appliedPremioRoleta = res.data[0];
+        premioGuardado = null;
       }
-      appliedPremioRoleta = res.data[0];
-      appliedCoupon = null; // prêmio tem prioridade, não acumula
       renderPremioRoletaBanner();
       renderCupomField();
       renderCheckoutFooter();
@@ -1077,29 +1088,47 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
   function renderPremioRoletaBanner(){
     var wrap = document.getElementById("premioRoletaWrap");
     if (!wrap) return;
-    if (!appliedPremioRoleta){ wrap.innerHTML = ""; return; }
 
-    var p = appliedPremioRoleta;
-    var descricao;
-    if (p.premio_tipo === "brinde"){
-      descricao = "🎁 Brinde: " + p.premio_nome + " — nossa equipe vai confirmar na entrega.";
-    } else if (p.premio_tipo === "frete_gratis"){
-      descricao = "🚚 Entrega grátis aplicada automaticamente!";
-    } else {
-      descricao = "Desconto aplicado automaticamente!";
+    var caixa = "background:rgba(212,175,55,0.12); border:2px solid var(--gold); border-radius:12px; padding:12px 16px; font-size:0.88rem; font-weight:600;";
+    var apoio = "display:block; font-weight:400; font-size:0.8rem; margin-top:6px; color:var(--cream-dim);";
+
+    if (appliedPremioRoleta){
+      var p = appliedPremioRoleta;
+      var descricao;
+      if (p.premio_tipo === "brinde"){
+        descricao = "🎁 Brinde: " + p.premio_nome + " — nossa equipe vai confirmar na entrega.";
+      } else if (p.premio_tipo === "frete_gratis"){
+        descricao = "🚚 Entrega grátis aplicada automaticamente!";
+      } else {
+        descricao = "Desconto aplicado automaticamente!";
+      }
+      wrap.innerHTML =
+        '<div style="' + caixa + '">🎉 Prêmio aplicado! ' + descricao +
+          '<span style="' + apoio + '">Tem um cupom melhor? Digite o código abaixo: ele entra no lugar do prêmio neste pedido, e o prêmio fica guardado para o próximo.</span>' +
+        '</div>';
+      return;
     }
-    wrap.innerHTML =
-      '<div style="background:rgba(212,175,55,0.12); border:2px solid var(--gold); border-radius:12px; padding:12px 16px; font-size:0.88rem; font-weight:600;">' +
-        '🎉 Prêmio aplicado! ' + descricao +
-      '</div>';
+
+    if (premioGuardado && appliedCoupon){
+      wrap.innerHTML =
+        '<div style="' + caixa + '">Cupom ' + appliedCoupon.codigo + ' aplicado no lugar do prêmio da roleta. O prêmio (' + premioGuardado.premio_nome + ') continua guardado para o próximo pedido.' +
+          '<button type="button" class="btn-cupom-aplicar" id="btnUsarPremio" style="margin-top:8px;">Usar o prêmio no lugar do cupom</button>' +
+        '</div>';
+      document.getElementById("btnUsarPremio").addEventListener("click", function(){
+        appliedCoupon = null;
+        appliedPremioRoleta = premioGuardado;
+        premioGuardado = null;
+        renderPremioRoletaBanner();
+        renderCupomField();
+        renderCheckoutFooter();
+      });
+      return;
+    }
+
+    wrap.innerHTML = "";
   }
 
   function aplicarCupom(){
-    if (appliedPremioRoleta){
-      var msgElBloqueado = document.getElementById("cupomMsg");
-      if (msgElBloqueado){ msgElBloqueado.style.color = "var(--red)"; msgElBloqueado.textContent = "Você já tem um prêmio da roleta aplicado. Não acumula com cupom."; }
-      return;
-    }
     var codigo = document.getElementById("inputCupom").value.trim();
     var telefone = document.getElementById("inputTelefone").value.trim();
     var msgEl = document.getElementById("cupomMsg");
@@ -1121,6 +1150,11 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
         return;
       }
       appliedCoupon = res.data;
+      if (appliedPremioRoleta){
+        premioGuardado = appliedPremioRoleta; // o cupom entra no lugar do prêmio, que fica guardado
+        appliedPremioRoleta = null;
+      }
+      renderPremioRoletaBanner();
       renderCupomField();
       renderCheckoutFooter();
     });
@@ -1405,6 +1439,8 @@ document.getElementById("closeCheckout").addEventListener("click", closeCheckout
     renderFloatingCart();
     closeCheckout();
         premioLink = null;
+    premioGuardado = null;
+        premioGuardado = null;
     showToast("Pedido enviado! Confirme no WhatsApp.");
 
     if (eraRetirada){
