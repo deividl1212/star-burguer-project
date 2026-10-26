@@ -903,7 +903,7 @@
 }
 .btn-share-kit:hover{ border-color:var(--gold); color:var(--gold); }
 /* ---------- Carrossel de banners (promoções) ---------- */
-.banner-carousel{ margin:0 0 22px; }
+.banner-carousel{ max-width:760px; margin:0 auto 22px; }
 .banner-track{
   display:flex; overflow-x:auto;
   scroll-snap-type:x mandatory; scroll-behavior:smooth;
